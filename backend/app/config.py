@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "sqlite:///./grade_management.db"
+    DATABASE_URL: str = "postgresql://leo@localhost:5432/grade_management"
 
     # JWT
     JWT_SECRET_KEY: str = "change-this-secret-in-production"
