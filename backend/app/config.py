@@ -13,7 +13,8 @@ class Settings(BaseSettings):
 
     # AI Providers
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_BASE_URL: str = "https://api.llmhub.com.cn/v1"
+    OPENAI_MODEL: str = "qwen3.5-flash"
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
     LOCAL_MODEL_URL: str = "http://localhost:11434"  # Ollama default

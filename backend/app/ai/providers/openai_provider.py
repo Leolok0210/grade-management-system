@@ -10,8 +10,11 @@ from app.config import settings
 
 class OpenAIProvider(AIProvider):
     def __init__(self):
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self._models = ["gpt-4o-mini", "gpt-4o"]
+        self.client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            base_url=settings.OPENAI_BASE_URL,
+        )
+        self._models = [settings.OPENAI_MODEL]
 
     async def chat(
         self,
