@@ -3,6 +3,7 @@ Agent Orchestrator - 意圖識別 → 技能調度 → 回應生成
 """
 
 import json
+from typing import Union
 from app.ai.router import MultiModelRouter
 from app.skills.registry import get_skill, get_tool_definitions_for_role
 from app.skills.base import SkillResult, UserContext
@@ -45,7 +46,7 @@ class AgentOrchestrator:
         conversation_history: list[dict],
         context: UserContext,
         db,
-    ) -> SkillResult | str:
+    ) -> Union[SkillResult, str]:
         """處理使用者訊息，返回技能執行結果或自然語言回應"""
 
         tools = get_tool_definitions_for_role(context.role)
