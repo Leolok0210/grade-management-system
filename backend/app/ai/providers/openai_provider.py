@@ -2,7 +2,7 @@
 OpenAI Provider 實作
 """
 
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from openai import AsyncOpenAI
 from app.ai.provider import AIProvider, AIResponse, StreamChunk
 from app.config import settings
@@ -16,8 +16,8 @@ class OpenAIProvider(AIProvider):
     async def chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
     ) -> AIResponse:
         model = model or settings.OPENAI_MODEL
         kwargs = {"model": model, "messages": messages}
@@ -44,8 +44,8 @@ class OpenAIProvider(AIProvider):
     async def chat_stream(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
     ) -> AsyncIterator[StreamChunk]:
         model = model or settings.OPENAI_MODEL
         kwargs = {"model": model, "messages": messages, "stream": True}

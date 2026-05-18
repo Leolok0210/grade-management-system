@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.skills.base import BaseSkill, SkillResult, UserContext  # noqa: F401
 
 _skill_registry: dict[str, BaseSkill] = {}
@@ -7,7 +9,7 @@ def register_skill(skill: BaseSkill):
     _skill_registry[skill.name] = skill
 
 
-def get_skill(name: str) -> BaseSkill | None:
+def get_skill(name: str) -> Optional[BaseSkill]:
     return _skill_registry.get(name)
 
 

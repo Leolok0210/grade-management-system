@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -19,16 +21,16 @@ _orchestrator = AgentOrchestrator(_ai_router)
 
 
 class ChatMessage(BaseModel):
-    conversation_id: str | None = None
+    conversation_id: Optional[str] = None
     message: str
 
 
 class ChatResponse(BaseModel):
     conversation_id: str
     reply: str
-    data_card: dict | None = None
+    data_card: Optional[dict] = None
     needs_confirm: bool = False
-    confirm_request_id: str | None = None
+    confirm_request_id: Optional[str] = None
 
 
 @router.post("/message", response_model=ChatResponse)

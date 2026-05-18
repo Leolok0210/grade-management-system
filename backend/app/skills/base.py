@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel
 
 
@@ -7,7 +7,7 @@ class SkillResult(BaseModel):
     success: bool
     message: str
     data: Any = None
-    data_card: dict | None = None  # type: table/chart/form/transcript
+    data_card: Optional[dict] = None  # type: table/chart/form/transcript
 
 
 class UserContext(BaseModel):

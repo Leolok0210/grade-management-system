@@ -2,6 +2,8 @@
 多模型路由器 - 根據任務類型選擇最適模型
 """
 
+from typing import Optional
+
 from app.ai.provider import AIProvider, AIResponse, StreamChunk
 from app.ai.providers.openai_provider import OpenAIProvider
 from app.ai.providers.claude_provider import ClaudeProvider
@@ -31,7 +33,7 @@ class MultiModelRouter(AIProvider):
         # Local always available (may fail at runtime)
         self._providers["local"] = LocalProvider()
 
-    def get_provider(self, provider_name: str | None = None) -> AIProvider:
+    def get_provider(self, provider_name: Optional[str] = None) -> AIProvider:
         name = provider_name or settings.DEFAULT_PROVIDER
         if name in self._providers:
             return self._providers[name]
@@ -49,9 +51,9 @@ class MultiModelRouter(AIProvider):
     async def chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
-        provider: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
     ) -> AIResponse:
         p = self.get_provider(provider)
         return await p.chat(messages, tools, model)
@@ -59,9 +61,9 @@ class MultiModelRouter(AIProvider):
     async def chat_stream(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
-        provider: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
     ):
         p = self.get_provider(provider)
         async for chunk in p.chat_stream(messages, tools, model):

@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime
+from datetime import date as date_type
 from decimal import Decimal
 from sqlalchemy import String, Boolean, Date, ForeignKey, DateTime, Numeric, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -36,7 +37,7 @@ class MakeupExam(Base):
     semester_id: Mapped[str] = mapped_column(String(36), ForeignKey("semesters.id"), nullable=False)
     original_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=True)
     makeup_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=True)
-    makeup_date: Mapped[date] = mapped_column(Date, nullable=True)
+    makeup_date: Mapped[date_type] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(10), default="pending")  # pending/passed/failed/absent
     registered_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

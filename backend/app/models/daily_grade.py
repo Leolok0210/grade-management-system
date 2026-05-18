@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime
+from datetime import date as date_type
 from decimal import Decimal
 from sqlalchemy import String, Date, ForeignKey, DateTime, Numeric, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -13,7 +14,7 @@ class DailyGradeItem(Base):
     class_subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("class_subjects.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)  # 第三次數學小考
     grade_type: Mapped[str] = mapped_column(String(20), nullable=False)  # 作業/小考/課堂參與/口試/其他
-    date: Mapped[date] = mapped_column(Date, nullable=False)
+    date: Mapped[date_type] = mapped_column(Date, nullable=False)
     max_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("100.00"))
     weight: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("1.00"))
     created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)

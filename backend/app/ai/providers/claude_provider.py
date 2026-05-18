@@ -3,7 +3,7 @@ Claude Provider 實作
 """
 
 import json
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from anthropic import AsyncAnthropic
 from app.ai.provider import AIProvider, AIResponse, StreamChunk
 from app.config import settings
@@ -29,8 +29,8 @@ class ClaudeProvider(AIProvider):
     async def chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
     ) -> AIResponse:
         model = model or settings.ANTHROPIC_MODEL
         kwargs = {"model": model, "messages": messages, "max_tokens": 4096}
@@ -57,8 +57,8 @@ class ClaudeProvider(AIProvider):
     async def chat_stream(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
-        model: str | None = None,
+        tools: Optional[list[dict]] = None,
+        model: Optional[str] = None,
     ) -> AsyncIterator[StreamChunk]:
         model = model or settings.ANTHROPIC_MODEL
         kwargs = {"model": model, "messages": messages, "max_tokens": 4096}
