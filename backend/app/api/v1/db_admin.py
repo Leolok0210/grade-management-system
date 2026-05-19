@@ -218,10 +218,24 @@ async def db_dashboard():
     """
 
 
-@router.get("/stats")
-async def db_stats(db: Session = Depends(get_db), current_user=Depends(require_role("admin"))):
+def _get_tables_and_views(db):
+    """取得所有資料表和視圖"""
     inspector = inspect(db.bind)
     tables = inspector.get_table_names()
+    # PostgreSQL: 查詢視圖
+    try:
+        views_result = db.execute(text(
+            "SELECT viewname FROM pg_views WHERE schemaname = 'public'"
+        )).fetchall()
+        views = [r[0] for r in views_result]
+    except Exception:
+        views = []
+    return sorted(tables + views)
+
+
+@router.get("/stats")
+async def db_stats(db: Session = Depends(get_db), current_user=Depends(require_role("admin"))):
+    tables = _get_tables_and_views(db)
     result = []
     for t in sorted(tables):
         count = db.execute(text(f'SELECT COUNT(*) FROM "{t}"')).scalar()
@@ -231,8 +245,7 @@ async def db_stats(db: Session = Depends(get_db), current_user=Depends(require_r
 
 @router.get("/tables")
 async def list_tables(db: Session = Depends(get_db), current_user=Depends(require_role("admin"))):
-    inspector = inspect(db.bind)
-    return sorted(inspector.get_table_names())
+    return _get_tables_and_views(db)
 
 
 @router.get("/table/{table_name}")
@@ -242,11 +255,17 @@ async def get_table_data(
     db: Session = Depends(get_db),
     current_user=Depends(require_role("admin")),
 ):
-    inspector = inspect(db.bind)
-    if table_name not in inspector.get_table_names():
+    all_names = _get_tables_and_views(db)
+    if table_name not in all_names:
         return {"error": "資料表不存在"}
 
-    columns = [c["name"] for c in inspector.get_columns(table_name)]
+    # 嘗試取得欄位（table 和 view 都適用）
+    try:
+        inspector = inspect(db.bind)
+        columns = [c["name"] for c in inspector.get_columns(table_name)]
+    except Exception:
+        result = db.execute(text(f'SELECT * FROM "{table_name}" LIMIT 0'))
+        columns = list(result.keys())
     rows = db.execute(text(f'SELECT * FROM "{table_name}" LIMIT :lim'), {"lim": limit}).fetchall()
 
     return {

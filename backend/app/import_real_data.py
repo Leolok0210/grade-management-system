@@ -4,6 +4,7 @@ import openpyxl
 from datetime import date
 from decimal import Decimal
 from app.database import engine, SessionLocal, Base
+from sqlalchemy import text
 from app.models.school import School, Campus, AcademicYear, Semester
 from app.models.user import User
 from app.models.student import Class, Student
