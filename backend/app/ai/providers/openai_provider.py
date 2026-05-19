@@ -26,7 +26,7 @@ class OpenAIProvider(AIProvider):
         kwargs = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
+            # qwen3.5-flash 不支援 tool_choice，不設定
 
         response = await self.client.chat.completions.create(**kwargs)
         choice = response.choices[0]
@@ -54,7 +54,6 @@ class OpenAIProvider(AIProvider):
         kwargs = {"model": model, "messages": messages, "stream": True}
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
 
         stream = await self.client.chat.completions.create(**kwargs)
         async for chunk in stream:
