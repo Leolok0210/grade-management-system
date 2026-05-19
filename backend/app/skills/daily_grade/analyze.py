@@ -10,7 +10,7 @@ from sqlalchemy import func
 
 class DailyGradeAnalyze(BaseSkill):
     name = "daily_grade.analyze"
-    description = "分析平時成績趨勢，包含平均分數、分數分佈、最高最低分、標準差等統計"
+    description = "分析平時成績，包含學生排名、平均分數、分數分佈、最高最低分、標準差。當使用者提到排名、名次、前幾名、成績分析時使用此技能"
     parameters = {
         "type": "object",
         "properties": {
@@ -61,6 +61,11 @@ class DailyGradeAnalyze(BaseSkill):
 
         avg_rows.sort(key=lambda x: x[1], reverse=True)
 
+        # 加上排名
+        ranked_rows = []
+        for rank, row in enumerate(avg_rows, 1):
+            ranked_rows.append([rank, *row])
+
         # 標準差
         variance = sum((s - avg) ** 2 for s in scores) / len(scores)
         std_dev = round(variance ** 0.5, 2)
@@ -79,10 +84,10 @@ class DailyGradeAnalyze(BaseSkill):
             },
             data_card={
                 "type": "table",
-                "title": "平時成績分析 - 各學生平均",
+                "title": "平時成績排名 - 各學生平均",
                 "payload": {
-                    "columns": ["學生", "平均分數", "成績筆數"],
-                    "rows": avg_rows[:20],  # 最多顯示20人
+                    "columns": ["排名", "學生", "平均分數", "成績筆數"],
+                    "rows": ranked_rows,
                 },
             },
         )
