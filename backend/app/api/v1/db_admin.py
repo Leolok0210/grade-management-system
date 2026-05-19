@@ -10,7 +10,7 @@ router = APIRouter(prefix="/admin/db", tags=["資料庫管理"])
 
 
 @router.get("/", response_class=HTMLResponse)
-async def db_dashboard(current_user=Depends(require_role("admin"))):
+async def db_dashboard():
     return """
     <!DOCTYPE html>
     <html lang="zh-TW">
@@ -20,8 +20,16 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; }
-            .header { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 16px 24px; }
+            .header { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
             .header h1 { font-size: 20px; }
+            .header .user { font-size: 13px; opacity: 0.9; }
+            .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; justify-content: center; align-items: center; z-index: 999; }
+            .login-card { background: #fff; border-radius: 16px; padding: 40px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+            .login-card h2 { text-align: center; margin-bottom: 8px; font-size: 24px; }
+            .login-card p { text-align: center; color: #888; margin-bottom: 24px; font-size: 14px; }
+            .login-card input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; outline: none; }
+            .login-card button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
+            .login-card .error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 8px; }
             .container { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
             .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
             .card h2 { font-size: 16px; margin-bottom: 12px; color: #333; }
@@ -30,8 +38,8 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
             .stat .num { font-size: 28px; font-weight: 700; color: #667eea; }
             .stat .label { font-size: 13px; color: #888; margin-top: 4px; }
             table { width: 100%; border-collapse: collapse; font-size: 14px; }
-            th { background: #f5f6fa; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #eee; }
-            td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+            th { background: #f5f6fa; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #eee; white-space: nowrap; }
+            td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             tr:hover td { background: #f8f9ff; }
             .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
             .tab { padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 13px; }
@@ -41,60 +49,110 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
             .btn-primary { background: #667eea; color: #fff; }
             .btn-primary:hover { background: #5a6fd6; }
             .result-area { margin-top: 12px; overflow-x: auto; }
-            .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-            .badge-green { background: #e8f5e9; color: #2e7d32; }
-            .badge-red { background: #ffebee; color: #c62828; }
-            .badge-blue { background: #e3f2fd; color: #1565c0; }
+            .hidden { display: none; }
         </style>
     </head>
     <body>
-        <div class="header"><h1>資料庫管理</h1></div>
-        <div class="container">
-            <div id="stats" class="stats"></div>
-            <div class="card">
-                <h2>資料表</h2>
-                <div id="tabs" class="tabs"></div>
-                <div id="table-content"></div>
+        <div id="login-overlay" class="login-overlay">
+            <div class="login-card">
+                <h2>資料庫管理</h2>
+                <p>請登入管理員帳號</p>
+                <input id="username" placeholder="帳號" value="admin">
+                <input id="password" type="password" placeholder="密碼" value="123456">
+                <button onclick="doLogin()">登入</button>
+                <div id="login-error" class="error"></div>
             </div>
-            <div class="card">
-                <h2>SQL 查詢</h2>
-                <textarea id="sql-input" class="sql-input" placeholder="SELECT * FROM users LIMIT 10;"></textarea>
-                <div style="margin-top:8px;">
-                    <button class="btn btn-primary" onclick="runSQL()">執行</button>
+        </div>
+        <div id="main-app" class="hidden">
+            <div class="header">
+                <h1>資料庫管理</h1>
+                <div class="user" id="user-info"></div>
+            </div>
+            <div class="container">
+                <div id="stats" class="stats"></div>
+                <div class="card">
+                    <h2>資料表</h2>
+                    <div id="tabs" class="tabs"></div>
+                    <div id="table-content"></div>
                 </div>
-                <div id="sql-result" class="result-area"></div>
+                <div class="card">
+                    <h2>SQL 查詢</h2>
+                    <textarea id="sql-input" class="sql-input" placeholder="SELECT * FROM users LIMIT 10;"></textarea>
+                    <div style="margin-top:8px;">
+                        <button class="btn btn-primary" onclick="runSQL()">執行</button>
+                    </div>
+                    <div id="sql-result" class="result-area"></div>
+                </div>
             </div>
         </div>
         <script>
-            const API = '/api/v1/admin/db';
+            const API = '/api/v1';
+            let TOKEN = localStorage.getItem('db_admin_token') || '';
             let currentTable = '';
 
+            async function doLogin() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                try {
+                    const resp = await fetch(API + '/auth/login', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({username, password})
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        document.getElementById('login-error').textContent = data.detail || '登入失敗';
+                        return;
+                    }
+                    if (data.user.role !== 'admin') {
+                        document.getElementById('login-error').textContent = '需要管理員權限';
+                        return;
+                    }
+                    TOKEN = data.access_token;
+                    localStorage.setItem('db_admin_token', TOKEN);
+                    document.getElementById('login-overlay').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    document.getElementById('user-info').textContent = data.user.name + ' (' + data.user.role + ')';
+                    loadStats();
+                    loadTables();
+                } catch(e) {
+                    document.getElementById('login-error').textContent = '連線錯誤';
+                }
+            }
+
+            async function apiFetch(url, options = {}) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + TOKEN;
+                const resp = await fetch(url, options);
+                if (resp.status === 401) {
+                    localStorage.removeItem('db_admin_token');
+                    location.reload();
+                }
+                return resp;
+            }
+
             async function loadStats() {
-                const resp = await fetch(API + '/stats');
+                const resp = await apiFetch(API + '/admin/db/stats');
                 const data = await resp.json();
-                const el = document.getElementById('stats');
-                el.innerHTML = data.map(s =>
+                document.getElementById('stats').innerHTML = data.map(s =>
                     `<div class="stat"><div class="num">${s.count}</div><div class="label">${s.table}</div></div>`
                 ).join('');
             }
 
             async function loadTables() {
-                const resp = await fetch(API + '/tables');
+                const resp = await apiFetch(API + '/admin/db/tables');
                 const tables = await resp.json();
-                const tabs = document.getElementById('tabs');
-                tabs.innerHTML = tables.map(t =>
+                document.getElementById('tabs').innerHTML = tables.map(t =>
                     `<div class="tab ${t === currentTable ? 'active' : ''}" onclick="loadTable('${t}')">${t}</div>`
                 ).join('');
-                if (!currentTable && tables.length > 0) {
-                    loadTable(tables[0]);
-                }
+                if (!currentTable && tables.length > 0) loadTable(tables[0]);
             }
 
             async function loadTable(name) {
                 currentTable = name;
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 event.target.classList.add('active');
-                const resp = await fetch(API + '/table/' + name + '?limit=50');
+                const resp = await apiFetch(API + '/admin/db/table/' + name + '?limit=50');
                 const data = await resp.json();
                 const el = document.getElementById('table-content');
                 if (!data.columns || !data.rows) { el.innerHTML = '<p>無資料</p>'; return; }
@@ -104,8 +162,8 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
                 data.rows.forEach(row => {
                     html += '<tr>';
                     row.forEach(cell => {
-                        let val = cell === null ? '<span style="color:#ccc">NULL</span>' : cell;
-                        html += `<td>${val}</td>`;
+                        let val = cell === null ? '<span style="color:#ccc">NULL</span>' : String(cell);
+                        html += `<td title="${val}">${val}</td>`;
                     });
                     html += '</tr>';
                 });
@@ -117,7 +175,7 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
             async function runSQL() {
                 const sql = document.getElementById('sql-input').value.trim();
                 if (!sql) return;
-                const resp = await fetch(API + '/query', {
+                const resp = await apiFetch(API + '/admin/db/query', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({sql})
@@ -132,8 +190,8 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
                 data.rows.forEach(row => {
                     html += '<tr>';
                     row.forEach(cell => {
-                        let val = cell === null ? '<span style="color:#ccc">NULL</span>' : cell;
-                        html += `<td>${val}</td>`;
+                        let val = cell === null ? '<span style="color:#ccc">NULL</span>' : String(cell);
+                        html += `<td title="${val}">${val}</td>`;
                     });
                     html += '</tr>';
                 });
@@ -141,8 +199,19 @@ async def db_dashboard(current_user=Depends(require_role("admin"))):
                 el.innerHTML = html;
             }
 
-            loadStats();
-            loadTables();
+            // Auto-login if token exists
+            if (TOKEN) {
+                apiFetch(API + '/admin/db/tables').then(resp => {
+                    if (resp.ok) {
+                        document.getElementById('login-overlay').classList.add('hidden');
+                        document.getElementById('main-app').classList.remove('hidden');
+                        loadStats();
+                        loadTables();
+                    } else {
+                        localStorage.removeItem('db_admin_token');
+                    }
+                });
+            }
         </script>
     </body>
     </html>
@@ -193,7 +262,6 @@ class SQLQuery(BaseModel):
 @router.post("/query")
 async def run_query(req: SQLQuery, db: Session = Depends(get_db), current_user=Depends(require_role("admin"))):
     sql = req.sql.strip()
-    # Only allow SELECT
     if not sql.upper().startswith("SELECT"):
         return {"error": "只允許 SELECT 查詢"}
 
