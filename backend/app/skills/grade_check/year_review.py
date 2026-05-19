@@ -14,8 +14,8 @@ class YearReview(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "academic_year_id": {"type": "string", "description": "學年ID"},
-            "class_id": {"type": "string", "description": "班級ID（可選）"},
+            "academic_year_id": {"type": "integer", "description": "學年ID"},
+            "class_id": {"type": "integer", "description": "班級ID（可選）"},
         },
         "required": ["academic_year_id"],
     }

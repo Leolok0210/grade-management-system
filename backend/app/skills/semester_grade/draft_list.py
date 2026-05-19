@@ -13,9 +13,9 @@ class GradeDraftGenerate(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_id": {"type": "string", "description": "班級ID"},
-            "subject_id": {"type": "string", "description": "科目ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_id": {"type": "integer", "description": "班級ID"},
+            "subject_id": {"type": "integer", "description": "科目ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
         },
         "required": ["class_id", "subject_id", "semester_id"],
     }

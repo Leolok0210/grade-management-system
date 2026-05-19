@@ -15,7 +15,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: str  # admin / dept_head / teacher
-    school_id: str
+    school_id: int
 
 
 class UserUpdate(BaseModel):
@@ -25,11 +25,11 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: int
     username: str
     name: str
     role: str
-    school_id: str
+    school_id: int
     is_active: bool
 
     model_config = {"from_attributes": True}

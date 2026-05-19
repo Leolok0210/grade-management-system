@@ -13,8 +13,8 @@ class TranscriptGenerate(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "student_id": {"type": "string", "description": "學生ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "student_id": {"type": "integer", "description": "學生ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
         },
         "required": ["student_id", "semester_id"],
     }

@@ -17,7 +17,7 @@ class SemesterGradeRegister(BaseSkill):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "student_id": {"type": "string"},
+                        "student_id": {"type": "integer"},
                         "midterm_score": {"type": "number", "description": "期中考分數"},
                         "final_score": {"type": "number", "description": "期末考分數"},
                         "semester_score": {"type": "number", "description": "學期總成績（直接輸入）"},
@@ -25,8 +25,8 @@ class SemesterGradeRegister(BaseSkill):
                 },
                 "description": "學生成績列表",
             },
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
         },
         "required": ["class_subject_id", "semester_id", "scores"],
     }

@@ -14,8 +14,8 @@ class SemesterReview(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "semester_id": {"type": "string", "description": "學期ID"},
-            "class_id": {"type": "string", "description": "班級ID（可選）"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
+            "class_id": {"type": "integer", "description": "班級ID（可選）"},
         },
         "required": ["semester_id"],
     }

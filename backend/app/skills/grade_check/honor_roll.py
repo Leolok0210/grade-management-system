@@ -14,9 +14,9 @@ class HonorRollList(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_id": {"type": "string", "description": "班級ID（可選，不填則全部班級）"},
-            "semester_id": {"type": "string", "description": "學期ID"},
-            "subject_id": {"type": "string", "description": "科目ID（可選，不填則按總平均排名）"},
+            "class_id": {"type": "integer", "description": "班級ID（可選，不填則全部班級）"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
+            "subject_id": {"type": "integer", "description": "科目ID（可選，不填則按總平均排名）"},
             "top_n": {"type": "integer", "description": "取前N名，預設5"},
         },
         "required": ["semester_id"],

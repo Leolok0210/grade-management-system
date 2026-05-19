@@ -13,8 +13,8 @@ class DailyGradeCheck(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
-            "student_id": {"type": "string", "description": "學生ID（查單一學生）"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "student_id": {"type": "integer", "description": "學生ID（查單一學生）"},
             "grade_type": {"type": "string", "description": "成績類型篩選：作業/小考/課堂參與/口試"},
             "date_from": {"type": "string", "description": "起始日期 YYYY-MM-DD"},
             "date_to": {"type": "string", "description": "結束日期 YYYY-MM-DD"},

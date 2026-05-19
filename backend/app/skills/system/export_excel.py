@@ -15,8 +15,8 @@ class ExportExcel(BaseSkill):
         "type": "object",
         "properties": {
             "export_type": {"type": "string", "enum": ["daily", "semester"], "description": "匯出類型"},
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
             "output_path": {"type": "string", "description": "輸出檔案路徑"},
         },
         "required": ["export_type", "class_subject_id", "semester_id", "output_path"],

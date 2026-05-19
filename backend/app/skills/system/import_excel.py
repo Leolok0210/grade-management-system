@@ -16,8 +16,8 @@ class ImportExcel(BaseSkill):
         "properties": {
             "file_path": {"type": "string", "description": "Excel 檔案路徑"},
             "import_type": {"type": "string", "enum": ["daily", "semester"], "description": "匯入類型：平時成績或學期成績"},
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
             "title": {"type": "string", "description": "成績項目標題（平時成績用）"},
             "grade_type": {"type": "string", "description": "成績類型（平時成績用）"},
         },

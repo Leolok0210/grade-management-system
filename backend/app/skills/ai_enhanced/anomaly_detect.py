@@ -18,8 +18,8 @@ class AnomalyDetect(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_id": {"type": "string", "description": "班級ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_id": {"type": "integer", "description": "班級ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
             "threshold": {"type": "number", "description": "下降幅度閾值（分），預設30"},
         },
         "required": ["class_id", "semester_id"],

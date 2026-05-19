@@ -14,8 +14,8 @@ class NotifyParents(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
             "notify_type": {"type": "string", "enum": ["all", "failing_only"], "description": "通知範圍：全部或僅不及格"},
         },
         "required": ["class_subject_id", "semester_id"],

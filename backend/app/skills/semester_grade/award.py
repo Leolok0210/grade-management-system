@@ -17,8 +17,8 @@ class AwardGrant(BaseSkill):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "student_id": {"type": "string"},
-                        "award_type_id": {"type": "string", "description": "獎項類型ID"},
+                        "student_id": {"type": "integer"},
+                        "award_type_id": {"type": "integer", "description": "獎項類型ID"},
                         "semester_id": {"type": "string"},
                         "comment": {"type": "string", "description": "備註"},
                     },

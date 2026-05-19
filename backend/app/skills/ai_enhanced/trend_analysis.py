@@ -15,9 +15,9 @@ class TrendAnalysis(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "student_id": {"type": "string", "description": "學生ID（分析單一學生趨勢）"},
-            "class_id": {"type": "string", "description": "班級ID（分析班級趨勢）"},
-            "subject_id": {"type": "string", "description": "科目ID"},
+            "student_id": {"type": "integer", "description": "學生ID（分析單一學生趨勢）"},
+            "class_id": {"type": "integer", "description": "班級ID（分析班級趨勢）"},
+            "subject_id": {"type": "integer", "description": "科目ID"},
         },
         "required": [],
     }

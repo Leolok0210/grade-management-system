@@ -11,10 +11,10 @@ class SkillResult(BaseModel):
 
 
 class UserContext(BaseModel):
-    user_id: str
+    user_id: int
     name: str
     role: str
-    school_id: str
+    school_id: int
 
     model_config = {"from_attributes": True}
 

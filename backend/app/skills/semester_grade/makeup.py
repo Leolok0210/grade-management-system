@@ -19,7 +19,7 @@ class MakeupExamRegister(BaseSkill):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "student_id": {"type": "string"},
+                        "student_id": {"type": "integer"},
                         "class_subject_id": {"type": "string"},
                         "semester_id": {"type": "string"},
                         "original_score": {"type": "number"},

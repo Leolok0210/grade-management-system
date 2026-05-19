@@ -15,7 +15,7 @@ class DailyGradeRegister(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
             "title": {"type": "string", "description": "成績項目標題，例如「第三次作業」"},
             "grade_type": {
                 "type": "string",
@@ -27,7 +27,7 @@ class DailyGradeRegister(BaseSkill):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "student_id": {"type": "string"},
+                        "student_id": {"type": "integer"},
                         "score": {"type": "number"},
                     },
                 },

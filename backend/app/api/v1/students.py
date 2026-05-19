@@ -11,21 +11,22 @@ router = APIRouter(prefix="/students", tags=["學生管理"])
 
 
 class StudentResponse(BaseModel):
-    id: str
+    id: int
     student_no: str
     name: str
-    class_id: str
+    class_id: int
+    class_number: Optional[int] = None
     status: str
 
     model_config = {"from_attributes": True}
 
 
 class ClassResponse(BaseModel):
-    id: str
+    id: int
     name: str
     grade_level: int
     class_number: int
-    school_id: str
+    school_id: int
 
     model_config = {"from_attributes": True}
 
@@ -40,7 +41,7 @@ async def list_classes(
 
 @router.get("", response_model=list[StudentResponse])
 async def list_students(
-    class_id: Optional[str] = None,
+    class_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

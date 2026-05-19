@@ -21,10 +21,10 @@ export interface ConfirmationRequest {
 }
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   role: string;
-  school_id: string;
+  school_id: number;
 }
 
 export interface LoginRequest {

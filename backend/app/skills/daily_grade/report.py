@@ -12,7 +12,7 @@ class DailyGradeReport(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "class_subject_id": {"type": "string", "description": "班級科目ID"},
+            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
             "grade_type": {"type": "string", "description": "成績類型篩選（可選）"},
         },
         "required": ["class_subject_id"],

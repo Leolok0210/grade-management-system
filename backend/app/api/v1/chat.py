@@ -26,7 +26,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    conversation_id: str
+    conversation_id: int
     reply: str
     data_card: Optional[dict] = None
     needs_confirm: bool = False

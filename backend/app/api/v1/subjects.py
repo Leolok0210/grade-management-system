@@ -10,10 +10,10 @@ router = APIRouter(prefix="/subjects", tags=["科目管理"])
 
 
 class SubjectResponse(BaseModel):
-    id: str
+    id: int
     name: str
     code: str
-    school_id: str
+    school_id: int
 
     model_config = {"from_attributes": True}
 

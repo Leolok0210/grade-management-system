@@ -12,7 +12,7 @@ class AppealHandle(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "appeal_id": {"type": "string", "description": "申訴ID"},
+            "appeal_id": {"type": "integer", "description": "申訴ID"},
             "action": {"type": "string", "enum": ["approve", "reject"], "description": "審核動作"},
             "review_comment": {"type": "string", "description": "審核意見"},
         },

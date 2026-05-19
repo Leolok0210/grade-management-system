@@ -14,9 +14,9 @@ class ClassComparison(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "semester_id": {"type": "string", "description": "學期ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
             "grade_level": {"type": "integer", "description": "年級（1-6）"},
-            "subject_id": {"type": "string", "description": "科目ID（可選）"},
+            "subject_id": {"type": "integer", "description": "科目ID（可選）"},
         },
         "required": ["semester_id", "grade_level"],
     }

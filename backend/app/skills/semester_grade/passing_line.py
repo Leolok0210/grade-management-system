@@ -12,9 +12,9 @@ class PassingLineSet(BaseSkill):
     parameters = {
         "type": "object",
         "properties": {
-            "school_id": {"type": "string", "description": "學校ID"},
-            "semester_id": {"type": "string", "description": "學期ID"},
-            "subject_id": {"type": "string", "description": "科目ID"},
+            "school_id": {"type": "integer", "description": "學校ID"},
+            "semester_id": {"type": "integer", "description": "學期ID"},
+            "subject_id": {"type": "integer", "description": "科目ID"},
             "passing_score": {"type": "number", "description": "及格分數，預設60"},
             "makeup_passing_score": {"type": "number", "description": "補考及格分數，預設60"},
         },
