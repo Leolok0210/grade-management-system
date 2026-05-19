@@ -51,3 +51,15 @@ export interface ChatResponse {
   needs_confirm?: boolean;
   confirm_request_id?: string | null;
 }
+
+export interface ConversationItem {
+  id: number;
+  updated_at: string | null;
+  preview: string;
+}
+
+export interface ConversationDetail {
+  id: number;
+  messages: { role: string; content: string }[];
+  updated_at: string | null;
+}

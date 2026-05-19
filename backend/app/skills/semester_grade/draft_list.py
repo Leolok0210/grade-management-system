@@ -1,98 +1,138 @@
 """
-成績草榜產生技能
+學期成績草榜產生技能
 """
+from decimal import Decimal
 from app.skills.base import BaseSkill, SkillResult, UserContext
-from app.models.draft import DraftGradeList
 from app.models.semester_grade import SemesterGrade
-from app.models.student import Student
+from app.models.daily_grade import DailyGradeItem, DailyGrade
+from app.models.student import Student, Class
+from app.models.subject import ClassSubject, Subject
+from app.models.school import Semester
 
 
-class GradeDraftGenerate(BaseSkill):
+class DraftList(BaseSkill):
     name = "semester_grade.draft_list"
-    description = "產生成績草榜，列出班級科目所有學生的學期成績，供教務處審核"
+    description = "產生學期成績草榜，包含各科加權總分、排名、不及格標記。當使用者要求產生草榜、成績總表、學期成績單時使用"
     parameters = {
         "type": "object",
         "properties": {
             "class_id": {"type": "integer", "description": "班級ID"},
-            "subject_id": {"type": "integer", "description": "科目ID"},
             "semester_id": {"type": "integer", "description": "學期ID"},
+            "passing_score": {"type": "number", "description": "及格分數線，預設60"},
         },
-        "required": ["class_id", "subject_id", "semester_id"],
+        "required": ["class_id", "semester_id"],
     }
-    required_role = "dept_head"
+    required_role = "teacher"
 
     async def execute(self, params: dict, context: UserContext, db) -> SkillResult:
-        from app.models.subject import ClassSubject
+        class_id = params["class_id"]
+        semester_id = params["semester_id"]
+        passing_score = Decimal(str(params.get("passing_score", 60)))
 
-        # 找到 class_subject
-        cs = db.query(ClassSubject).filter(
-            ClassSubject.class_id == params["class_id"],
-            ClassSubject.subject_id == params["subject_id"],
-            ClassSubject.semester_id == params["semester_id"],
-        ).first()
+        cls = db.query(Class).filter(Class.id == class_id).first()
+        if not cls:
+            return SkillResult(success=False, message="找不到班級")
 
-        if not cs:
-            return SkillResult(success=False, message="找不到對應的班級科目設定")
+        semester = db.query(Semester).filter(Semester.id == semester_id).first()
+        if not semester:
+            return SkillResult(success=False, message="找不到學期")
 
-        # 取得所有學期成績
-        grades = db.query(SemesterGrade).filter(
-            SemesterGrade.class_subject_id == cs.id,
-            SemesterGrade.semester_id == params["semester_id"],
-        ).all()
+        # 取得班級所有學生
+        students = db.query(Student).filter(Student.class_id == class_id).order_by(Student.class_number).all()
+        if not students:
+            return SkillResult(success=False, message="班級內沒有學生")
 
-        # 取得學生列表
-        students = db.query(Student).filter(Student.class_id == params["class_id"]).all()
+        # 取得班級所有科目
+        class_subjects = db.query(ClassSubject).filter(ClassSubject.class_id == class_id).all()
+        if not class_subjects:
+            return SkillResult(success=False, message="班級沒有設定科目")
 
-        # 組合草榜資料
-        draft_data = []
-        rows = []
-        for student in students:
-            grade = next((g for g in grades if g.student_id == student.id), None)
-            entry = {
-                "student_id": student.id,
-                "student_no": student.student_no,
-                "name": student.name,
-                "daily_avg": float(grade.daily_avg) if grade and grade.daily_avg else None,
-                "midterm_score": float(grade.midterm_score) if grade and grade.midterm_score else None,
-                "final_score": float(grade.final_score) if grade and grade.final_score else None,
-                "semester_score": float(grade.semester_score) if grade and grade.semester_score else None,
-                "is_passing": grade.is_passing if grade else None,
-            }
-            draft_data.append(entry)
-            rows.append([
-                student.name, student.student_no,
-                entry["daily_avg"] or "-",
-                entry["midterm_score"] or "-",
-                entry["final_score"] or "-",
-                entry["semester_score"] or "-",
-                "及格" if entry["is_passing"] else "不及格" if entry["is_passing"] is not None else "-",
-            ])
+        # 計算每位學生的各科成績
+        student_scores = {}  # student_id -> {subject_name: score, total_weighted: Decimal, fail_count: int}
+        subject_names = []
 
-        # 儲存草榜
-        draft = DraftGradeList(
-            class_id=params["class_id"],
-            subject_id=params["subject_id"],
-            semester_id=params["semester_id"],
-            status="draft",
-            data=draft_data,
-            created_by=context.user_id,
+        for cs in class_subjects:
+            subj = db.query(Subject).filter(Subject.id == cs.subject_id).first()
+            subj_name = subj.name if subj else "?"
+            subject_names.append(subj_name)
+
+            for student in students:
+                if student.id not in student_scores:
+                    student_scores[student.id] = {"name": student.name, "subjects": {}, "total": Decimal("0"), "fail_count": 0}
+
+                # 先查學期成績
+                sg = db.query(SemesterGrade).filter(
+                    SemesterGrade.student_id == student.id,
+                    SemesterGrade.class_subject_id == cs.id,
+                    SemesterGrade.semester_id == semester_id,
+                ).first()
+
+                if sg and sg.semester_score is not None:
+                    score = float(sg.semester_score)
+                elif sg and sg.midterm_score is not None:
+                    # 只有期中成績，用期中分數
+                    score = float(sg.midterm_score)
+                else:
+                    # 沒有學期成績，從平時成績計算加權平均
+                    daily_grades = (
+                        db.query(DailyGrade)
+                        .join(DailyGradeItem)
+                        .filter(
+                            DailyGradeItem.class_subject_id == cs.id,
+                            DailyGrade.student_id == student.id,
+                        )
+                        .all()
+                    )
+                    if daily_grades:
+                        avg = sum(float(g.score) for g in daily_grades) / len(daily_grades)
+                        score = round(avg, 1)
+                    else:
+                        score = None
+
+                student_scores[student.id]["subjects"][subj_name] = score
+                if score is not None:
+                    student_scores[student.id]["total"] += Decimal(str(score))
+                    if Decimal(str(score)) < passing_score:
+                        student_scores[student.id]["fail_count"] += 1
+
+        # 排名（按總分）
+        ranked = sorted(
+            [(sid, data) for sid, data in student_scores.items()],
+            key=lambda x: x[1]["total"],
+            reverse=True,
         )
-        db.add(draft)
-        db.commit()
+
+        # 建立表格
+        columns = ["排名", "學生"] + subject_names + ["總分", "不及格數"]
+        rows = []
+        for rank, (sid, data) in enumerate(ranked, 1):
+            row = [rank, data["name"]]
+            for subj_name in subject_names:
+                score = data["subjects"].get(subj_name)
+                if score is not None:
+                    cell = score
+                    if Decimal(str(score)) < passing_score:
+                        cell = f"{score} ✗"
+                    row.append(cell)
+                else:
+                    row.append("-")
+            row.append(float(data["total"]))
+            row.append(data["fail_count"])
+            rows.append(row)
 
         return SkillResult(
             success=True,
-            message=f"已產生成績草榜，共 {len(draft_data)} 位學生",
-            data={"draft_id": draft.id, "count": len(draft_data)},
+            message=f"已產生 {cls.name} 學期成績草榜，共 {len(ranked)} 名學生",
+            data={"class_name": cls.name, "student_count": len(ranked)},
             data_card={
                 "type": "table",
-                "title": "成績草榜",
+                "title": f"{cls.name} 學期成績草榜",
                 "payload": {
-                    "columns": ["姓名", "學號", "平時平均", "期中考", "期末考", "學期總成績", "及格與否"],
+                    "columns": columns,
                     "rows": rows,
                 },
             },
         )
 
     def preview(self, params: dict, context: UserContext) -> str:
-        return "產生成績草榜"
+        return f"產生學期成績草榜"

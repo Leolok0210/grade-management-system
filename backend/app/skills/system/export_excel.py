@@ -1,89 +1,149 @@
 """
-匯出 Excel 報表技能
+Excel 匯出技能
 """
+import os
 from app.skills.base import BaseSkill, SkillResult, UserContext
-from app.models.semester_grade import SemesterGrade
-from app.models.daily_grade import DailyGrade, DailyGradeItem
+from app.models.daily_grade import DailyGradeItem, DailyGrade
 from app.models.student import Student
-from app.models.subject import ClassSubject, Subject
+from app.models.subject import ClassSubject
+
+EXPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "exports")
+os.makedirs(EXPORT_DIR, exist_ok=True)
 
 
 class ExportExcel(BaseSkill):
     name = "system.export_excel"
-    description = "匯出成績資料為 Excel 報表，支援平時成績和學期成績匯出"
+    description = "匯出成績為 Excel 檔案供下載。當使用者要求匯出、下載、輸出成績時使用"
     parameters = {
         "type": "object",
         "properties": {
-            "export_type": {"type": "string", "enum": ["daily", "semester"], "description": "匯出類型"},
             "class_subject_id": {"type": "integer", "description": "班級科目ID"},
-            "semester_id": {"type": "integer", "description": "學期ID"},
-            "output_path": {"type": "string", "description": "輸出檔案路徑"},
+            "grade_type": {"type": "string", "description": "成績類型篩選（可選）"},
+            "export_type": {"type": "string", "enum": ["daily", "daily_summary"], "description": "匯出類型：daily=明細，daily_summary=各學生平均"},
         },
-        "required": ["export_type", "class_subject_id", "semester_id", "output_path"],
+        "required": ["class_subject_id", "export_type"],
     }
     required_role = "teacher"
 
     async def execute(self, params: dict, context: UserContext, db) -> SkillResult:
         from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 
-        export_type = params["export_type"]
         class_subject_id = params["class_subject_id"]
-        output_path = params["output_path"]
+        export_type = params["export_type"]
 
         cs = db.query(ClassSubject).filter(ClassSubject.id == class_subject_id).first()
-        subject = db.query(Subject).filter(Subject.id == cs.subject_id).first() if cs else None
-        students = db.query(Student).filter(Student.class_id == cs.class_id).all() if cs else []
+        if not cs:
+            return SkillResult(success=False, message="找不到班級科目設定")
+
+        from app.models.student import Class
+        from app.models.subject import Subject
+        cls = db.query(Class).filter(Class.id == cs.class_id).first()
+        subj = db.query(Subject).filter(Subject.id == cs.subject_id).first()
+        cls_name = cls.name if cls else "?"
+        subj_name = subj.name if subj else "?"
 
         wb = Workbook()
         ws = wb.active
-        ws.title = f"{subject.name if subject else '成績'}報表"
+        ws.title = f"{cls_name}{subj_name}"
+
+        header_font = Font(bold=True, size=12)
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font_white = Font(bold=True, size=11, color="FFFFFF")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
 
         if export_type == "daily":
-            ws.append(["學號", "姓名", "項目", "類型", "分數", "日期"])
+            query = db.query(DailyGrade).join(DailyGradeItem).filter(
+                DailyGradeItem.class_subject_id == class_subject_id
+            )
+            if params.get("grade_type"):
+                query = query.filter(DailyGradeItem.grade_type == params["grade_type"])
 
-            items = db.query(DailyGradeItem).filter(
-                DailyGradeItem.class_subject_id == class_subject_id,
-            ).all()
+            grades = query.order_by(DailyGradeItem.date.desc()).all()
 
-            for item in items:
-                for g in item.grades:
-                    student = next((s for s in students if s.id == g.student_id), None)
-                    ws.append([
-                        student.student_no if student else "",
-                        student.name if student else "",
-                        item.title,
-                        item.grade_type,
-                        float(g.score),
-                        item.date.isoformat(),
-                    ])
+            if not grades:
+                return SkillResult(success=True, message="查無成績記錄，無法匯出")
 
-        elif export_type == "semester":
-            ws.append(["學號", "姓名", "平時平均", "期中考", "期末考", "學期總成績", "及格與否"])
+            ws.append([f"{cls_name} {subj_name} 平時成績明細"])
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
+            ws["A1"].font = header_font
 
-            grades = db.query(SemesterGrade).filter(
-                SemesterGrade.class_subject_id == class_subject_id,
-                SemesterGrade.semester_id == params["semester_id"],
-            ).all()
+            headers = ["學生", "項目", "類型", "分數", "日期"]
+            ws.append(headers)
+            for cell in ws[2]:
+                cell.font = header_font_white
+                cell.fill = header_fill
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center")
 
             for g in grades:
-                student = next((s for s in students if s.id == g.student_id), None)
+                student = db.query(Student).filter(Student.id == g.student_id).first()
                 ws.append([
-                    student.student_no if student else "",
-                    student.name if student else "",
-                    float(g.daily_avg) if g.daily_avg else "",
-                    float(g.midterm_score) if g.midterm_score else "",
-                    float(g.final_score) if g.final_score else "",
-                    float(g.semester_score) if g.semester_score else "",
-                    "及格" if g.is_passing else "不及格" if g.is_passing is not None else "",
+                    student.name if student else g.student_id,
+                    g.item.title,
+                    g.item.grade_type,
+                    float(g.score),
+                    g.item.date.isoformat(),
                 ])
+                for cell in ws[ws.max_row]:
+                    cell.border = thin_border
 
-        wb.save(output_path)
+        elif export_type == "daily_summary":
+            query = db.query(DailyGrade).join(DailyGradeItem).filter(
+                DailyGradeItem.class_subject_id == class_subject_id
+            )
+            grades = query.all()
+
+            if not grades:
+                return SkillResult(success=True, message="查無成績記錄，無法匯出")
+
+            student_avgs = {}
+            for g in grades:
+                if g.student_id not in student_avgs:
+                    student_avgs[g.student_id] = []
+                student_avgs[g.student_id].append(float(g.score))
+
+            ws.append([f"{cls_name} {subj_name} 成績總表"])
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+            ws["A1"].font = header_font
+
+            headers = ["排名", "學生", "平均分數", "成績筆數"]
+            ws.append(headers)
+            for cell in ws[2]:
+                cell.font = header_font_white
+                cell.fill = header_fill
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center")
+
+            rows = []
+            for sid, scores in student_avgs.items():
+                student = db.query(Student).filter(Student.id == sid).first()
+                avg = round(sum(scores) / len(scores), 2)
+                rows.append([student.name if student else sid, avg, len(scores)])
+
+            rows.sort(key=lambda x: x[1], reverse=True)
+            for rank, row in enumerate(rows, 1):
+                ws.append([rank, *row])
+                for cell in ws[ws.max_row]:
+                    cell.border = thin_border
+
+        # 儲存
+        import uuid
+        file_id = str(uuid.uuid4())[:8]
+        filename = f"{cls_name}_{subj_name}_{export_type}_{file_id}.xlsx"
+        filepath = os.path.join(EXPORT_DIR, filename)
+        wb.save(filepath)
 
         return SkillResult(
             success=True,
-            message=f"已匯出報表至 {output_path}",
-            data={"file_path": output_path},
+            message=f"已匯出 Excel 檔案：{filename}，可至 /api/v1/chat/export/{file_id} 下載",
+            data={"filename": filename, "file_id": file_id},
         )
 
     def preview(self, params: dict, context: UserContext) -> str:
-        return f"匯出 {params.get('export_type', '')} 成績報表"
+        return f"匯出 {params.get('export_type', '')} 成績 Excel"

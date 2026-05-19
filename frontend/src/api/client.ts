@@ -50,6 +50,8 @@ export const authApi = {
 // Chat API
 export const chatApi = {
   sendMessage: (data: ChatRequest) => api.post<ChatResponse>("/chat/message", data),
+  getConversations: () => api.get<ConversationItem[]>("/chat/conversations"),
+  getConversation: (id: number) => api.get<ConversationDetail>(`/chat/conversations/${id}`),
 };
 
 // Resources API
