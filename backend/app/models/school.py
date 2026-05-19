@@ -1,4 +1,3 @@
-import uuid
 from sqlalchemy import String, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -7,7 +6,7 @@ from app.database import Base
 class School(Base):
     __tablename__ = "schools"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
 
@@ -18,8 +17,8 @@ class School(Base):
 class Campus(Base):
     __tablename__ = "campuses"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    school_id: Mapped[str] = mapped_column(String(36), ForeignKey("schools.id"), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     school = relationship("School", back_populates="campuses")
@@ -28,8 +27,8 @@ class Campus(Base):
 class AcademicYear(Base):
     __tablename__ = "academic_years"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    school_id: Mapped[str] = mapped_column(String(36), ForeignKey("schools.id"), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id"), nullable=False)
     label: Mapped[str] = mapped_column(String(20), nullable=False)  # 114學年度
     is_current: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -40,8 +39,8 @@ class AcademicYear(Base):
 class Semester(Base):
     __tablename__ = "semesters"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    academic_year_id: Mapped[str] = mapped_column(String(36), ForeignKey("academic_years.id"), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    academic_year_id: Mapped[int] = mapped_column(ForeignKey("academic_years.id"), nullable=False)
     semester: Mapped[int] = mapped_column(nullable=False)  # 1 or 2
     is_current: Mapped[bool] = mapped_column(Boolean, default=False)
 
