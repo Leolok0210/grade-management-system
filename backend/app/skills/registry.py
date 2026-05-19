@@ -1,6 +1,7 @@
 """
 Skill Registry - 技能註冊中心
 """
+from typing import Optional
 from app.skills.base import BaseSkill
 from app.skills.daily_grade.check import DailyGradeCheck
 from app.skills.daily_grade.register import DailyGradeRegister
@@ -39,7 +40,7 @@ _register(ClassComparison())
 _register(MakeupSuggestion())
 
 
-def get_skill(name: str) -> BaseSkill | None:
+def get_skill(name: str) -> Optional[BaseSkill]:
     return _skills.get(name)
 
 
