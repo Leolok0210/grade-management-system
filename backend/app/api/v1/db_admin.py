@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect
+from pydantic import BaseModel
 from app.database import get_db
 from app.deps import require_role
 
@@ -187,9 +188,6 @@ async def get_table_data(
 
 class SQLQuery(BaseModel):
     sql: str
-
-
-from pydantic import BaseModel
 
 
 @router.post("/query")
