@@ -219,7 +219,7 @@ async def db_dashboard():
 
 
 def _get_tables_and_views(db):
-    """取得所有資料表和視圖"""
+    """取得所有資料表和視圖（排除已被視圖取代的原表）"""
     inspector = inspect(db.bind)
     tables = inspector.get_table_names()
     # PostgreSQL: 查詢視圖
@@ -230,7 +230,10 @@ def _get_tables_and_views(db):
         views = [r[0] for r in views_result]
     except Exception:
         views = []
-    return sorted(tables + views)
+    all_items = sorted(tables + views)
+    # 被視圖取代的原表不顯示
+    hidden = {"daily_grades"}
+    return [t for t in all_items if t not in hidden]
 
 
 @router.get("/stats")
