@@ -234,6 +234,35 @@ def import_real_data():
         db.commit()
 
         # =============================================
+        # 10. 建立成績視圖（方便查詢）
+        # =============================================
+        db.execute(text("""
+            CREATE OR REPLACE VIEW v_daily_grades AS
+            SELECT
+                dg.id,
+                s.student_no,
+                s.name AS student_name,
+                s.class_number,
+                c.name AS class_name,
+                subj.name AS subject_name,
+                dgi.title AS exam_name,
+                dgi.grade_type,
+                dgi.date AS exam_date,
+                dg.score,
+                dgi.max_score,
+                u.name AS teacher_name
+            FROM daily_grades dg
+            JOIN daily_grade_items dgi ON dg.daily_grade_item_id = dgi.id
+            JOIN class_subjects cs ON dgi.class_subject_id = cs.id
+            JOIN subjects subj ON cs.subject_id = subj.id
+            JOIN students s ON dg.student_id = s.id
+            JOIN classes c ON s.class_id = c.id
+            JOIN users u ON dgi.created_by = u.id
+            ORDER BY s.class_number, subj.name, dgi.title
+        """))
+        db.commit()
+
+        # =============================================
         # 驗證：對比 Excel vs DB
         # =============================================
         print("=" * 60)
