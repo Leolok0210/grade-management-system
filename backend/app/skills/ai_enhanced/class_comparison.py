@@ -1,79 +1,92 @@
 """
-班級科目比較分析技能
-同年級不同班級、不同科目成績分佈比較
+班級科目比較技能
 """
 from app.skills.base import BaseSkill, SkillResult, UserContext
-from app.models.semester_grade import SemesterGrade
-from app.models.student import Class
+from app.models.daily_grade import DailyGradeItem, DailyGrade
+from app.models.student import Student, Class
 from app.models.subject import ClassSubject, Subject
 
 
 class ClassComparison(BaseSkill):
     name = "ai.class_comparison"
-    description = "比較同年級不同班級的成績分佈，或不同科目的平均分數差異"
+    description = "比較不同班級的科目成績，包含平均分、最高分、最低分、及格率。當使用者提到班級比較、哪班比較好、對比時使用"
     parameters = {
         "type": "object",
         "properties": {
-            "semester_id": {"type": "integer", "description": "學期ID"},
-            "grade_level": {"type": "integer", "description": "年級（1-6）"},
-            "subject_id": {"type": "integer", "description": "科目ID（可選）"},
+            "class_subject_ids": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "description": "要比較的班級科目ID列表（至少2個）",
+            },
+            "grade_type": {"type": "string", "description": "成績類型篩選（可選）"},
         },
-        "required": ["semester_id", "grade_level"],
+        "required": ["class_subject_ids"],
     }
-    required_role = "dept_head"
+    required_role = "teacher"
 
     async def execute(self, params: dict, context: UserContext, db) -> SkillResult:
-        semester_id = params["semester_id"]
-        grade_level = params["grade_level"]
-        subject_id = params.get("subject_id")
+        cs_ids = params["class_subject_ids"]
+        if len(cs_ids) < 2:
+            return SkillResult(success=False, message="至少需要2個班級科目進行比較")
 
-        classes = db.query(Class).filter(
-            Class.school_id == context.school_id,
-            Class.grade_level == grade_level,
-        ).all()
+        results = []
+        for cs_id in cs_ids:
+            cs = db.query(ClassSubject).filter(ClassSubject.id == cs_id).first()
+            if not cs:
+                continue
 
-        rows = []
-        for cls in classes:
-            cs_list = db.query(ClassSubject).filter(
-                ClassSubject.class_id == cls.id,
-                ClassSubject.semester_id == semester_id,
-            ).all()
+            cls = db.query(Class).filter(Class.id == cs.class_id).first()
+            subj = db.query(Subject).filter(Subject.id == cs.subject_id).first()
+            label = f"{cls.name if cls else '?'} {subj.name if subj else '?'}"
 
-            for cs in cs_list:
-                if subject_id and cs.subject_id != subject_id:
-                    continue
-                subject = db.query(Subject).filter(Subject.id == cs.subject_id).first()
-                grades = db.query(SemesterGrade).filter(
-                    SemesterGrade.class_subject_id == cs.id,
-                    SemesterGrade.semester_id == semester_id,
-                    SemesterGrade.semester_score.isnot(None),
-                ).all()
+            query = db.query(DailyGrade).join(DailyGradeItem).filter(
+                DailyGradeItem.class_subject_id == cs_id
+            )
+            if params.get("grade_type"):
+                query = query.filter(DailyGradeItem.grade_type == params["grade_type"])
 
-                if not grades:
-                    continue
+            grades = query.all()
+            if not grades:
+                results.append({"label": label, "avg": "-", "max": "-", "min": "-", "pass_rate": "-", "count": 0})
+                continue
 
-                scores = [float(g.semester_score) for g in grades]
-                avg = round(sum(scores) / len(scores), 2)
-                passing = len([s for s in scores if s >= 60])
-                passing_rate = round(passing / len(scores) * 100, 1)
+            scores = [float(g.score) for g in grades]
+            avg = round(sum(scores) / len(scores), 1)
+            max_s = max(scores)
+            min_s = min(scores)
+            pass_rate = round(sum(1 for s in scores if s >= 60) / len(scores) * 100, 1)
 
-                rows.append([cls.name, subject.name if subject else "-", avg, max(scores), min(scores), f"{passing_rate}%", len(scores)])
+            results.append({
+                "label": label,
+                "avg": avg,
+                "max": max_s,
+                "min": min_s,
+                "pass_rate": f"{pass_rate}%",
+                "count": len(scores),
+            })
 
-        if not rows:
-            return SkillResult(success=True, message="查無可比較的成績資料")
+        columns = ["班級科目", "平均分", "最高分", "最低分", "及格率", "筆數"]
+        rows = [[r["label"], r["avg"], r["max"], r["min"], r["pass_rate"], r["count"]] for r in results]
+
+        valid = [r for r in results if r["avg"] != "-"]
+        best = max(valid, key=lambda x: x["avg"]) if valid else None
+        msg = "、".join(r["label"] for r in results) + " 的成績比較"
+        if best:
+            msg += f"，{best['label']} 平均最高（{best['avg']}分）"
 
         return SkillResult(
             success=True,
-            message=f"班級科目比較分析完成",
+            message=msg,
+            data={"comparison": results},
             data_card={
                 "type": "table",
-                "title": f"{grade_level}年級班級科目比較",
+                "title": "班級科目成績比較",
                 "payload": {
-                    "columns": ["班級", "科目", "平均", "最高", "最低", "及格率", "人數"],
+                    "columns": columns,
                     "rows": rows,
                 },
             },
         )
 
     def preview(self, params: dict, context: UserContext) -> str:
-        return f"比較 {params.get('grade_level', '')} 年級班級成績"
+        return "比較班級科目成績"

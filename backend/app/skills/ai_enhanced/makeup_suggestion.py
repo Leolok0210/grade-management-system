@@ -1,81 +1,96 @@
 """
 智慧補考建議技能
-根據歷史數據預測補考通過率，建議補考名單
 """
+from decimal import Decimal
 from app.skills.base import BaseSkill, SkillResult, UserContext
-from app.models.semester_grade import SemesterGrade, MakeupExam
-from app.models.student import Student
+from app.models.daily_grade import DailyGradeItem, DailyGrade
+from app.models.semester_grade import SemesterGrade
+from app.models.student import Student, Class
 from app.models.subject import ClassSubject, Subject
+from app.models.school import Semester
 
 
 class MakeupSuggestion(BaseSkill):
     name = "ai.makeup_suggestion"
-    description = "根據不及格學生的成績數據，智慧建議補考名單和預測通過機率"
+    description = "自動列出需要補考的學生及建議補考科目。當使用者提到補考、不及格、需要重考時使用"
     parameters = {
         "type": "object",
         "properties": {
-            "class_subject_id": {"type": "integer", "description": "班級科目ID"},
+            "class_id": {"type": "integer", "description": "班級ID"},
             "semester_id": {"type": "integer", "description": "學期ID"},
+            "passing_score": {"type": "number", "description": "及格分數線，預設60"},
         },
-        "required": ["class_subject_id", "semester_id"],
+        "required": ["class_id", "semester_id"],
     }
     required_role = "teacher"
 
     async def execute(self, params: dict, context: UserContext, db) -> SkillResult:
-        class_subject_id = params["class_subject_id"]
+        class_id = params["class_id"]
         semester_id = params["semester_id"]
+        passing_score = Decimal(str(params.get("passing_score", 60)))
 
-        # 找不及格學生
-        failing_grades = db.query(SemesterGrade).filter(
-            SemesterGrade.class_subject_id == class_subject_id,
-            SemesterGrade.semester_id == semester_id,
-            SemesterGrade.is_passing == False,
-        ).all()
+        cls = db.query(Class).filter(Class.id == class_id).first()
+        if not cls:
+            return SkillResult(success=False, message="找不到班級")
 
-        if not failing_grades:
-            return SkillResult(success=True, message="無不及格學生，不需補考")
+        students = db.query(Student).filter(Student.class_id == class_id).order_by(Student.class_number).all()
+        if not students:
+            return SkillResult(success=False, message="班級內沒有學生")
 
-        cs = db.query(ClassSubject).filter(ClassSubject.id == class_subject_id).first()
-        subject = db.query(Subject).filter(Subject.id == cs.subject_id).first() if cs else None
+        class_subjects = db.query(ClassSubject).filter(ClassSubject.class_id == class_id).all()
 
-        rows = []
-        for g in failing_grades:
-            student = db.query(Student).filter(Student.id == g.student_id).first()
-            score = float(g.semester_score) if g.semester_score else 0
+        makeup_list = []
 
-            # 檢查是否已登記補考
-            existing = db.query(MakeupExam).filter(
-                MakeupExam.student_id == g.student_id,
-                MakeupExam.class_subject_id == class_subject_id,
-                MakeupExam.semester_id == semester_id,
-            ).first()
+        for student in students:
+            for cs in class_subjects:
+                subj = db.query(Subject).filter(Subject.id == cs.subject_id).first()
+                subj_name = subj.name if subj else "?"
 
-            # 簡易預測：距離及格線越近，通過機率越高
-            gap = 60 - score
-            if gap <= 5:
-                prob = "高 (80%+)"
-            elif gap <= 15:
-                prob = "中 (50-80%)"
-            else:
-                prob = "低 (<50%)"
+                sg = db.query(SemesterGrade).filter(
+                    SemesterGrade.student_id == student.id,
+                    SemesterGrade.class_subject_id == cs.id,
+                    SemesterGrade.semester_id == semester_id,
+                ).first()
 
-            status = "已登記" if existing else "待登記"
-            rows.append([student.name if student else g.student_id, score, gap, prob, status])
+                if sg and sg.semester_score is not None and sg.semester_score < passing_score:
+                    makeup_list.append([student.name, subj_name, float(sg.semester_score), "學期成績"])
+                    continue
 
-        rows.sort(key=lambda x: x[2])  # 按差距排序
+                daily_grades = (
+                    db.query(DailyGrade)
+                    .join(DailyGradeItem)
+                    .filter(
+                        DailyGradeItem.class_subject_id == cs.id,
+                        DailyGrade.student_id == student.id,
+                    )
+                    .all()
+                )
+                if daily_grades:
+                    avg = sum(float(g.score) for g in daily_grades) / len(daily_grades)
+                    if Decimal(str(round(avg, 1))) < passing_score:
+                        already = any(m[0] == student.name and m[1] == subj_name for m in makeup_list)
+                        if not already:
+                            makeup_list.append([student.name, subj_name, round(avg, 1), "平時成績"])
+
+        if not makeup_list:
+            return SkillResult(success=True, message=f"{cls.name} 所有學生均及格，無需補考")
+
+        students_need = len(set(m[0] for m in makeup_list))
+        subjects_need = len(set(m[1] for m in makeup_list))
 
         return SkillResult(
             success=True,
-            message=f"共 {len(failing_grades)} 位不及格學生，建議安排補考",
+            message=f"{cls.name} 共 {students_need} 名學生需要補考，涉及 {subjects_need} 個科目",
+            data={"students_need": students_need, "subjects_need": subjects_need, "total": len(makeup_list)},
             data_card={
                 "type": "table",
-                "title": f"補考建議名單 - {subject.name if subject else ''}",
+                "title": f"{cls.name} 補考建議名單",
                 "payload": {
-                    "columns": ["學生", "學期成績", "距及格線", "通過預測", "狀態"],
-                    "rows": rows,
+                    "columns": ["學生", "科目", "分數", "成績類型"],
+                    "rows": sorted(makeup_list, key=lambda x: (x[0], x[1])),
                 },
             },
         )
 
     def preview(self, params: dict, context: UserContext) -> str:
-        return "智慧補考建議"
+        return "產生補考建議名單"

@@ -22,8 +22,7 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    from app.skills.auto_register import register_all_skills
-    register_all_skills()
+    # 技能已在 app.skills.registry 模組載入時自動註冊
 
 
 @app.get("/")
