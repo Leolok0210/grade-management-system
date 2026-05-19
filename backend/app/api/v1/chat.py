@@ -21,7 +21,7 @@ _orchestrator = AgentOrchestrator(_ai_router)
 
 
 class ChatMessage(BaseModel):
-    conversation_id: Optional[str] = None
+    conversation_id: Optional[int] = None
     message: str
 
 

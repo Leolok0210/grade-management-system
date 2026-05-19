@@ -40,12 +40,12 @@ export interface TokenResponse {
 }
 
 export interface ChatRequest {
-  conversation_id?: string;
+  conversation_id?: number;
   message: string;
 }
 
 export interface ChatResponse {
-  conversation_id: string;
+  conversation_id: number;
   reply: string;
   data_card?: DataCard | null;
   needs_confirm?: boolean;

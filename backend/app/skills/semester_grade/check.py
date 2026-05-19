@@ -8,7 +8,7 @@ from app.models.student import Student
 
 class SemesterGradeCheck(BaseSkill):
     name = "semester_grade.check"
-    description = "查詢學期成績，可依班級科目、學生篩選"
+    description = "查詢學生的學期總成績（期中、期末、學期加權總分），僅在使用者明確提到「學期總成績」「期中考」「期末考」時使用。一般的大測、小考、作業成績請用 daily_grade.check"
     parameters = {
         "type": "object",
         "properties": {

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 class DailyGradeCheck(BaseSkill):
     name = "daily_grade.check"
-    description = "查詢學生的平時成績（大測、小考、作業、課堂參與等），可依班級、科目、學生、成績類型篩選。當使用者提到查看某班某科的成績、分數、測驗結果時，優先使用此技能"
+    description = "查詢學生的平時成績（大測、小考、作業、課堂參與等），可依班級、科目、學生、成績類型篩選。當使用者提到查看成績、分數、測驗結果、大測成績時，優先使用此技能"
     parameters = {
         "type": "object",
         "properties": {

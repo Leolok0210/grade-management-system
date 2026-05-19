@@ -6,7 +6,7 @@ export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeDataCard, setActiveDataCard] = useState<DataCard | null>(null);
-  const conversationIdRef = useRef<string | null>(null);
+  const conversationIdRef = useRef<number | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     const userMsg: ChatMessage = {
