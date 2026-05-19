@@ -28,9 +28,10 @@ class Student(Base):
     __tablename__ = "students"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    student_no: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    student_no: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)  # F250001
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), nullable=False)
+    class_number: Mapped[int] = mapped_column(SmallInteger, nullable=True)  # 班內學號(1,2,3...)
     status: Mapped[str] = mapped_column(String(10), default="active")  # active/transferred/graduated/dropped
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
