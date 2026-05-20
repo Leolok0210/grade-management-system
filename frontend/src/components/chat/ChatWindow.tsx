@@ -29,6 +29,12 @@ export function ChatWindow() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    chatApi.system.getConfig().then(({ data }) => {
+      setWelcomeHints(data.welcome_hints || []);
+    }).catch(() => {});
+  }, []);
+
   const handleSend = () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -90,9 +96,9 @@ export function ChatWindow() {
               <h2>氹仔坊眾學校 成績管理助手</h2>
               <p>你可以問我：</p>
               <ul style={styles.hintList}>
-                <li>查看初一甲中文讀本的大測成績</li>
-                <li>初一甲數學的學生排名</li>
-                <li>幫初一甲數學登記一次小考</li>
+                {welcomeHints.map((hint) => (
+                  <li key={hint}>{hint}</li>
+                ))}
               </ul>
             </div>
           )}
