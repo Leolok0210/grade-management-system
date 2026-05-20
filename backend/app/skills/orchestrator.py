@@ -3,11 +3,14 @@ Agent Orchestrator - 意圖識別 → 技能調度 → 回應生成（串流版�
 """
 
 import json
+import logging
 from typing import Union, AsyncIterator
 from dataclasses import dataclass
 from app.ai.router import MultiModelRouter
 from app.skills.registry import get_skill, get_tool_definitions_for_role
 from app.skills.base import SkillResult, UserContext
+
+logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT_TEMPLATE = """你是氹仔坊眾學校的成績管理AI助手。使用者是學校老師和教職員。
@@ -140,6 +143,7 @@ class AgentOrchestrator:
         yield StreamEvent(type="status", data={"message": "正在理解您的需求..."})
 
         response = await self.ai_router.chat(messages=messages, tools=tools)
+        logger.info(f"AI response: finish={response.finish_reason}, tool_call={response.tool_call_name}, content={str(response.content)[:200] if response.content else None}")
 
         # Step 2: 有技能調用 → 執行技能
         if response.tool_call_name:
