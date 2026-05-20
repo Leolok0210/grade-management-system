@@ -68,6 +68,17 @@ class ClassComparison(BaseSkill):
         columns = ["班級科目", "平均分", "最高分", "最低分", "及格率", "筆數"]
         rows = [[r["label"], r["avg"], r["max"], r["min"], r["pass_rate"], r["count"]] for r in results]
 
+        # 圖表數據：只取有數值的結果
+        chart_data = [
+            {
+                "label": r["label"],
+                "avg": r["avg"] if r["avg"] != "-" else 0,
+                "max": r["max"] if r["max"] != "-" else 0,
+                "min": r["min"] if r["min"] != "-" else 0,
+            }
+            for r in results if r["avg"] != "-"
+        ]
+
         valid = [r for r in results if r["avg"] != "-"]
         best = max(valid, key=lambda x: x["avg"]) if valid else None
         msg = "、".join(r["label"] for r in results) + " 的成績比較"
@@ -86,6 +97,20 @@ class ClassComparison(BaseSkill):
                     "rows": rows,
                 },
             },
+            data_cards=[
+                {
+                    "type": "chart",
+                    "title": "班級科目成績對比",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "label",
+                        "y_key": "avg",
+                        "data": chart_data,
+                        "x_label": "班級科目",
+                        "y_label": "平均分",
+                    },
+                },
+            ],
         )
 
     def preview(self, params: dict, context: UserContext) -> str:

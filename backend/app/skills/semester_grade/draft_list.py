@@ -132,6 +132,23 @@ class DraftList(BaseSkill):
                     "rows": rows,
                 },
             },
+            data_cards=[
+                {
+                    "type": "chart",
+                    "title": f"{cls.name} 學期總分排名",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "name",
+                        "y_key": "total",
+                        "data": [
+                            {"name": data["name"], "total": float(data["total"])}
+                            for _, data in ranked
+                        ],
+                        "x_label": "學生",
+                        "y_label": "總分",
+                    },
+                },
+            ],
         )
 
     def preview(self, params: dict, context: UserContext) -> str:

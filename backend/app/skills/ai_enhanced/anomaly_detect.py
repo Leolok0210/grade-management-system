@@ -58,10 +58,16 @@ class AnomalyDetect(BaseSkill):
             student_scores.setdefault(g.student_id, []).append(float(g.score))
 
         anomalies = []
+        scatter_data = []
         for sid, scores in student_scores.items():
             student = db.query(Student).filter(Student.id == sid).first()
             avg = sum(scores) / len(scores)
             z_score = (avg - mean) / std_dev
+            scatter_data.append({
+                "name": student.name if student else str(sid),
+                "average": round(avg, 1),
+                "z_score": round(z_score, 2),
+            })
 
             if abs(z_score) > threshold:
                 direction = "異常偏高" if z_score > 0 else "異常偏低"
@@ -103,6 +109,20 @@ class AnomalyDetect(BaseSkill):
                     "rows": all_rows,
                 },
             },
+            data_cards=[
+                {
+                    "type": "chart",
+                    "title": f"{cls_name} {subj_name} Z分數分佈",
+                    "payload": {
+                        "chart_type": "scatter",
+                        "x_key": "average",
+                        "y_key": "z_score",
+                        "data": scatter_data,
+                        "x_label": "平均分",
+                        "y_label": "Z分數",
+                    },
+                },
+            ],
         )
 
     def preview(self, params: dict, context: UserContext) -> str:

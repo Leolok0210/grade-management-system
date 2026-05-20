@@ -56,10 +56,12 @@ class DailyGradeAnalyze(BaseSkill):
         # 分數分佈
         ranges = [(0, 59.9, "不及格(0-59)"), (60, 69.9, "及格(60-69)"), (70, 79.9, "中等(70-79)"), (80, 89.9, "良好(80-89)"), (90, 200, "優秀(90+)")]
         distribution = {}
+        dist_chart_data = []
         for low, high, label in ranges:
             count = len([s for s in scores if low <= s <= high])
             pct = round(count / len(scores) * 100, 1)
             distribution[label] = f"{count}人({pct}%)"
+            dist_chart_data.append({"range": label, "count": count})
 
         # 及格率
         pass_count = len([s for s in scores if s >= 60])
@@ -163,6 +165,36 @@ class DailyGradeAnalyze(BaseSkill):
                     "rows": final_rows,
                 },
             },
+            data_cards=[
+                {
+                    "type": "chart",
+                    "title": f"{cls_name} {subj_name} 成績分佈",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "range",
+                        "y_key": "count",
+                        "data": dist_chart_data,
+                        "x_label": "分數區間",
+                        "y_label": "人數",
+                        "colors": ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6"],
+                    },
+                },
+                {
+                    "type": "chart",
+                    "title": f"{cls_name} {subj_name} 學生平均排名",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "name",
+                        "y_key": "avg",
+                        "data": [
+                            {"name": row[1], "avg": row[2]}
+                            for row in final_rows
+                        ],
+                        "x_label": "學生",
+                        "y_label": "平均分",
+                    },
+                },
+            ],
         )
 
     def preview(self, params: dict, context: UserContext) -> str:

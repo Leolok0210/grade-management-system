@@ -102,11 +102,13 @@ export function useChat() {
                 )
               );
             } else if (eventType === "data_card") {
-              // 推送表格數據
+              // 推送表格/圖表數據
               const card = event.card as DataCard;
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantMsgId ? { ...m, dataCard: card } : m
+                  m.id === assistantMsgId
+                    ? { ...m, dataCard: card, dataCards: [...(m.dataCards || []), card] }
+                    : m
                 )
               );
               setActiveDataCard(card);

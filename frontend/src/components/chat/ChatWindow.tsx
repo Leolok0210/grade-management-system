@@ -114,7 +114,26 @@ export function ChatWindow() {
                   <span style={styles.typing}>思考中...</span>
                 )}
               </div>
-              {msg.dataCard && (
+              {msg.dataCards && msg.dataCards.length > 0 && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {msg.dataCards.map((card, idx) => (
+                    <ResultCard
+                      key={idx}
+                      card={card}
+                      onClose={() => {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === msg.id
+                              ? { ...m, dataCards: m.dataCards?.filter((_, i) => i !== idx) }
+                              : m
+                          )
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              {!msg.dataCards?.length && msg.dataCard && (
                 <div style={{ marginTop: 8 }}>
                   <ResultCard
                     card={msg.dataCard}

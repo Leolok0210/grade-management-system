@@ -4,6 +4,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   dataCard?: DataCard;
+  dataCards?: DataCard[];
   confirmation?: ConfirmationRequest;
   _status?: string;
 }

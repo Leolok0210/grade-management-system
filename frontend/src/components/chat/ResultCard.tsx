@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import type { DataCard } from "../../types";
+import { ChartCard } from "./ChartCard";
 
 interface ResultCardProps {
   card: DataCard;
@@ -43,6 +44,18 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
 
   const totalPages = Math.ceil(sortedRows.length / PAGE_SIZE);
   const pagedRows = sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  if (card.type === "chart") {
+    return (
+      <div style={styles.card}>
+        <div style={styles.header}>
+          <h3 style={styles.title}>{card.title}</h3>
+          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+        </div>
+        <ChartCard title="" payload={card.payload} />
+      </div>
+    );
+  }
 
   if (card.type === "table") {
     return (

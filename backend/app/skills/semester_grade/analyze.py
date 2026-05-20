@@ -42,8 +42,12 @@ class SemesterGradeAnalyze(BaseSkill):
         # 分佈
         ranges = [(0, 59), (60, 69), (70, 79), (80, 89), (90, 100)]
         dist = {}
+        dist_chart_data = []
         for low, high in ranges:
-            dist[f"{low}-{high}"] = len([s for s in scores if low <= s <= high])
+            key = f"{low}-{high}"
+            count = len([s for s in scores if low <= s <= high])
+            dist[key] = count
+            dist_chart_data.append({"range": key, "count": count})
 
         return SkillResult(
             success=True,
@@ -69,6 +73,35 @@ class SemesterGradeAnalyze(BaseSkill):
                     ],
                 },
             },
+            data_cards=[
+                {
+                    "type": "chart",
+                    "title": "學期成績分佈",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "range",
+                        "y_key": "count",
+                        "data": dist_chart_data,
+                        "x_label": "分數區間",
+                        "y_label": "人數",
+                        "colors": ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6"],
+                    },
+                },
+                {
+                    "type": "chart",
+                    "title": "學期成績及格率",
+                    "payload": {
+                        "chart_type": "pie",
+                        "x_key": "label",
+                        "y_key": "count",
+                        "data": [
+                            {"label": "及格", "count": passing_count},
+                            {"label": "不及格", "count": len(scores) - passing_count},
+                        ],
+                        "colors": ["#22c55e", "#ef4444"],
+                    },
+                },
+            ],
         )
 
     def preview(self, params: dict, context: UserContext) -> str:

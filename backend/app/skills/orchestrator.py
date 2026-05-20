@@ -162,6 +162,9 @@ class AgentOrchestrator:
             # 先推送 data_card（如果有）
             if result.data_card:
                 yield StreamEvent(type="data_card", data={"card": result.data_card})
+            if result.data_cards:
+                for card in result.data_cards:
+                    yield StreamEvent(type="data_card", data={"card": card})
 
             # 推送技能結果的靜態部分
             if result.message:

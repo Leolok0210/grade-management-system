@@ -8,6 +8,7 @@ class SkillResult(BaseModel):
     message: str
     data: Any = None
     data_card: Optional[dict] = None  # type: table/chart/form/transcript
+    data_cards: Optional[list[dict]] = None  # multiple cards
 
 
 class UserContext(BaseModel):
