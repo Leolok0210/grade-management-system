@@ -47,7 +47,7 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
 
   if (card.type === "chart") {
     return (
-      <div style={styles.card}>
+      <div style={{ ...styles.card, minWidth: 400 }}>
         <div style={styles.header}>
           <h3 style={styles.title}>{card.title}</h3>
           <button onClick={onClose} style={styles.closeBtn}>✕</button>

@@ -97,12 +97,19 @@ export function ChartCard({ title, payload }: ChartCardProps) {
 
   // Default: bar chart
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, minWidth: 0 }}>
       <h4 style={styles.title}>{title}</h4>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={payload.data}>
+        <BarChart data={payload.data} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={payload.x_key} />
+          <XAxis
+            dataKey={payload.x_key}
+            angle={-45}
+            textAnchor="end"
+            interval={0}
+            height={80}
+            tick={{ fontSize: 12 }}
+          />
           <YAxis />
           <Tooltip />
           <Legend />
