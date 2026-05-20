@@ -1,3 +1,6 @@
 {
+  "env": {
+    "VITE_API_URL": "https://hazy-bamboo-skeleton.ngrok-free.dev"
+  },
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

@@ -52,7 +52,7 @@ export function useChat() {
 
     try {
       const token = localStorage.getItem("access_token");
-      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+      const baseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api/v1";
 
       const response = await fetch(`${baseUrl}/chat/message/stream`, {
         method: "POST",
