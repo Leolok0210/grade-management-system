@@ -52,7 +52,7 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
           <h3 style={styles.title}>{card.title}</h3>
           <button onClick={onClose} style={styles.closeBtn}>✕</button>
         </div>
-        <ChartCard title="" payload={card.payload} />
+        <ChartCard title={card.title} payload={card.payload} />
       </div>
     );
   }
