@@ -59,6 +59,7 @@ export function useChat() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
           conversation_id: conversationIdRef.current || undefined,
