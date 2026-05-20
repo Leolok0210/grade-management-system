@@ -1,11 +1,9 @@
 import { useAuth } from "./hooks/useAuth";
-import { useChat } from "./hooks/useChat";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { ChatWindow } from "./components/chat/ChatWindow";
 
 function App() {
   const { user, isAuthenticated, login, logout } = useAuth();
-  const { messages, loading, activeDataCard, sendMessage, clearChat, setActiveDataCard } = useChat();
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={login} />;
@@ -44,13 +42,7 @@ function App() {
       </div>
 
       {/* Chat */}
-      <ChatWindow
-        messages={messages}
-        loading={loading}
-        activeDataCard={activeDataCard}
-        onSend={sendMessage}
-        onClearDataCard={() => setActiveDataCard(null)}
-      />
+      <ChatWindow />
     </div>
   );
 }
