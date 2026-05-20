@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "../../hooks/useChat";
+import { chatApi } from "../../api/client";
 import { ResultCard } from "./ResultCard";
-import type { DataCard } from "../../types";
 
 export function ChatWindow() {
   const {
@@ -19,6 +19,7 @@ export function ChatWindow() {
 
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [welcomeHints, setWelcomeHints] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
