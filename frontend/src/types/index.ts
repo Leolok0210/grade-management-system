@@ -5,6 +5,7 @@ export interface ChatMessage {
   timestamp: string;
   dataCard?: DataCard;
   confirmation?: ConfirmationRequest;
+  _status?: string;
 }
 
 export interface DataCard {

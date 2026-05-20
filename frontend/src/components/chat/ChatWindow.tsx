@@ -100,7 +100,10 @@ export function ChatWindow() {
             <div key={msg.id} style={msg.role === "user" ? styles.userRow : styles.assistantRow}>
               <div style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}>
                 {msg.content}
-                {msg.content === "" && msg.role === "assistant" && loading && (
+                {msg._status && (
+                  <span style={styles.typing}>{msg._status}</span>
+                )}
+                {!msg.content && !msg._status && msg.role === "assistant" && loading && (
                   <span style={styles.typing}>思考中...</span>
                 )}
               </div>

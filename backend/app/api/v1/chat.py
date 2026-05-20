@@ -114,23 +114,18 @@ async def send_message_stream(
         db.commit()
         db.refresh(conv)
 
+    conv_id = conv.id
     history = conv.messages or []
     history.append({"role": "user", "content": req.message})
 
     async def event_generator():
         full_content = ""
-        async for chunk in _orchestrator.handle_message_stream(req.message, history[:-1], context):
-            data = {}
-            if chunk.content:
-                data["content"] = chunk.content
-                full_content += chunk.content
-            if chunk.tool_call_name:
-                data["tool_call"] = chunk.tool_call_name
-            if chunk.finish_reason:
-                data["done"] = True
-
-            if data:
-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+        async for event in _orchestrator.handle_message_stream(req.message, history[:-1], context, db):
+            sse_data = {"type": event.type}
+            if event.data:
+                sse_data.update(event.data)
+            full_content += sse_data.get("text", "")
+            yield f"data: {json.dumps(sse_data, ensure_ascii=False)}\n\n"
 
         # 儲存對話
         history.append({"role": "assistant", "content": full_content})

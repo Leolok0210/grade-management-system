@@ -1,5 +1,5 @@
 """
-平時成績分析技能 — 統計 + AI 深度分析
+平時成績分析技能 — 統計計算 + AI 串流分析
 """
 from app.skills.base import BaseSkill, SkillResult, UserContext
 from app.models.daily_grade import DailyGradeItem, DailyGrade
@@ -96,7 +96,11 @@ class DailyGradeAnalyze(BaseSkill):
                     "pass_rate": round(len([s for s in item_scores if s >= 60]) / len(item_scores) * 100, 1),
                 })
 
-        # === AI 深度分析 ===
+        # === 統計摘要（立即返回） ===
+        grade_type_desc = params.get("grade_type", "全部")
+        summary_line = f"{cls_name} {subj_name}（{grade_type_desc}）：平均 {avg} 分，最高 {max_score}，最低 {min_score}，標準差 {std_dev}，及格率 {pass_rate}%"
+
+        # === AI 分析 prompt（交由 orchestrator 串流推送） ===
         stats_summary = f"""
 {cls_name} {subj_name} 平時成績統計數據：
 
@@ -136,21 +140,10 @@ class DailyGradeAnalyze(BaseSkill):
 {stats_summary}
 """
 
-        # 呼叫 AI 產出分析
-        from app.ai.router import MultiModelRouter
-        ai_router = MultiModelRouter()
-        ai_response = await ai_router.chat(
-            messages=[{"role": "user", "content": ai_prompt}],
-        )
-
-        ai_analysis = ai_response.content or "（AI 分析暫時無法產出）"
-
-        grade_type_desc = params.get("grade_type", "全部")
-        summary_line = f"{cls_name} {subj_name}（{grade_type_desc}）：平均 {avg} 分，最高 {max_score}，最低 {min_score}，標準差 {std_dev}，及格率 {pass_rate}%"
-
+        # __STREAM__ 前綴告訴 orchestrator：靜態部分先推送，AI 分析串流推送
         return SkillResult(
             success=True,
-            message=summary_line + "\n\n" + ai_analysis,
+            message=f"__STREAM__{summary_line}\n\n",
             data={
                 "average": avg,
                 "max": max_score,
@@ -160,6 +153,7 @@ class DailyGradeAnalyze(BaseSkill):
                 "distribution": distribution,
                 "count": len(scores),
                 "exam_trends": exam_avgs,
+                "_ai_prompt": ai_prompt,
             },
             data_card={
                 "type": "table",
