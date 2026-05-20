@@ -26,9 +26,23 @@ class OpenAIProvider(AIProvider):
         kwargs = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
-            # qwen3.5-flash 不支援 tool_choice，不設定
+            # qwen3.5-plus 不支援 tool_choice，不設定
 
-        response = await self.client.chat.completions.create(**kwargs)
+        try:
+            response = await self.client.chat.completions.create(**kwargs)
+        except Exception as e:
+            # 如果模型不支援 tools，退回純文字模式
+            if tools and ("tool" in str(e).lower() or "function" in str(e).lower()):
+                kwargs.pop("tools", None)
+                response = await self.client.chat.completions.create(**kwargs)
+            else:
+                raise
+
+        if not hasattr(response, "choices") or not response.choices:
+            # 某些模型回傳格式不同，嘗試解析
+            content = str(response) if response else ""
+            return AIResponse(finish_reason="stop", content=content)
+
         choice = response.choices[0]
 
         result = AIResponse(finish_reason=choice.finish_reason or "stop")
@@ -37,7 +51,10 @@ class OpenAIProvider(AIProvider):
             tc = choice.message.tool_calls[0]
             result.tool_call_name = tc.function.name
             import json
-            result.tool_call_arguments = json.loads(tc.function.arguments)
+            try:
+                result.tool_call_arguments = json.loads(tc.function.arguments)
+            except (json.JSONDecodeError, TypeError):
+                result.tool_call_arguments = {}
             result.content = choice.message.content
         else:
             result.content = choice.message.content
