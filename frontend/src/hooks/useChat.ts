@@ -142,12 +142,17 @@ export function useChat() {
         conversationIdRef.current = convs[0].id;
       }
     } catch (err) {
+      // 只在完全沒收到內容時才顯示錯誤，保留已接收的部分
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? { ...m, content: "抱歉，發生錯誤，請稍後再試。", _status: undefined }
-            : m
-        )
+        prev.map((m) => {
+          if (m.id !== assistantMsgId) return m;
+          if (m.content && m.content.trim()) {
+            // 已有內容，保留並標記為完成
+            return { ...m, _status: undefined };
+          }
+          // 沒有內容，顯示錯誤
+          return { ...m, content: "抱歉，發生錯誤，請稍後再試。", _status: undefined };
+        })
       );
     } finally {
       setLoading(false);
