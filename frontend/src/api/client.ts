@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { LoginRequest, TokenResponse, ChatRequest, ChatResponse } from "../types";
+import type { LoginRequest, TokenResponse, ChatRequest, ChatResponse, ConversationItem, ConversationDetail } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
@@ -52,6 +52,9 @@ export const chatApi = {
   sendMessage: (data: ChatRequest) => api.post<ChatResponse>("/chat/message", data),
   getConversations: () => api.get<ConversationItem[]>("/chat/conversations"),
   getConversation: (id: number) => api.get<ConversationDetail>(`/chat/conversations/${id}`),
+  system: {
+    getConfig: () => api.get<{ welcome_hints: string[] }>("/system/config"),
+  },
 };
 
 // Resources API
