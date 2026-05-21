@@ -102,21 +102,35 @@ class DraftList(BaseSkill):
             reverse=True,
         )
 
-        # 建立表格
-        columns = ["排名", "學生"] + subject_names + ["總分", "不及格數"]
+        # 建立表格 - 符合格式要求的欄位結構
+        columns = ["學生編號|班級|姓名|學號"]
+        for subj_name in subject_names:
+            columns.append(subj_name)
+        columns.append("不及格測驗")
         rows = []
         for rank, (sid, data) in enumerate(ranked, 1):
-            row = [rank, data["name"]]
+            student = next((s for s in students if s.id == sid), None)
+            student_no = student.student_no if student else "?"
+            class_number = student.class_number if student else "?"
+
+            # 第一欄：學生識別
+            row = [f"{student_no}|初一甲|{data['name']}|{class_number}"]
+
+            # 各科分數
             for subj_name in subject_names:
                 score = data["subjects"].get(subj_name)
                 if score is not None:
-                    cell = score
                     if Decimal(str(score)) < passing_score:
-                        cell = f"{score} ✗"
+                        cell = f"{score}"
+                        fail_mark = True
+                    else:
+                        cell = f"{score}"
+                        fail_mark = False
                     row.append(cell)
                 else:
                     row.append("-")
-            row.append(float(data["total"]))
+
+            # 不及格次數
             row.append(data["fail_count"])
             rows.append(row)
 
