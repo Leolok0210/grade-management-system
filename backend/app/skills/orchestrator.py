@@ -83,6 +83,22 @@ example output structure:
    - 「錄入操行評估」
    - 「更新操行評語」
 
+4. 【班級德育月報、月報】→ 使用 conduct.class_monthly_report
+   - 「產生初一甲的德育月報」
+   - 「班級德育月報」
+
+5. 【學生個人操行評估表、個人操行】→ 使用 conduct.student_individual_report
+   - 「查看張三的操行評估表」
+   - 「學生個人操行報告」
+
+6. 【獎懲統計、獎懲報表】→ 使用 conduct.rewards_punishments_report
+   - 「產生獎懲統計報表」
+   - 「班級獎懲統計」
+
+7. 【常規違紀總結、違紀總結】→ 使用 conduct.regular_violations_report
+   - 「產生常規違紀總結」
+   - 「違紀總結報表」
+
 德育資料包含：
 - 常規違紀：欠作業、欠課本、上課違規、儀表不符、遲到、缺席、請假次數
 - 獎懲記錄：優點、小功、大功、缺點、小過、大過

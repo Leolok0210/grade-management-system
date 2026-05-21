@@ -17,6 +17,12 @@ from app.skills.ai_enhanced.anomaly_detect import AnomalyDetect
 from app.skills.ai_enhanced.class_comparison import ClassComparison
 from app.skills.ai_enhanced.makeup_suggestion import MakeupSuggestion
 from app.skills.conduct import ConductDraftList, ConductAnalysis, ConductAssessmentInput
+from app.skills.conduct.reports import (
+    ClassMonthlyReport,
+    StudentIndividualReport,
+    RewardsPunishmentsReport,
+    RegularViolationsReport,
+)
 
 _skills: dict[str, BaseSkill] = {}
 
@@ -42,6 +48,10 @@ _register(MakeupSuggestion())
 _register(ConductDraftList())
 _register(ConductAnalysis())
 _register(ConductAssessmentInput())
+_register(ClassMonthlyReport())
+_register(StudentIndividualReport())
+_register(RewardsPunishmentsReport())
+_register(RegularViolationsReport())
 
 
 def get_skill(name: str) -> Optional[BaseSkill]:
