@@ -1,7 +1,9 @@
 """
-學期成績草榜產生技能
+學期成績草榜產生技能 - 完整格式版本
+包含：科目、測驗名稱、測驗日期、負責老師、不及格率
 """
 from decimal import Decimal
+from datetime import date
 from app.skills.base import BaseSkill, SkillResult, UserContext
 from app.models.semester_grade import SemesterGrade
 from app.models.daily_grade import DailyGradeItem, DailyGrade
@@ -9,6 +11,7 @@ from app.models.student import Student, Class
 from app.models.subject import ClassSubject, Subject
 from app.models.school import Semester
 from app.models.table_format import TableFormatTemplate
+from app.models.user import User as UserModel
 
 
 class DraftList(BaseSkill):
@@ -60,88 +63,122 @@ class DraftList(BaseSkill):
         if not students:
             return SkillResult(success=False, message="班級內沒有學生")
 
-        # 取得班級所有科目
+        student_ids = [s.id for s in students]
+
+        # 取得班級所有考試項目（daily_grade_items）
         class_subjects = db.query(ClassSubject).filter(ClassSubject.class_id == class_id).all()
         if not class_subjects:
             return SkillResult(success=False, message="班級沒有設定科目")
 
-        # 計算每位學生的各科成績
-        student_scores = {}  # student_id -> {subject_name: score, total_weighted: Decimal, fail_count: int}
-        subject_names = []
+        # 收集所有考試項目及成績
+        exam_items = []  # [(exam_item_id, subject_name, title, date, teacher_name, fail_rate)]
 
         for cs in class_subjects:
             subj = db.query(Subject).filter(Subject.id == cs.subject_id).first()
             subj_name = subj.name if subj else "?"
-            subject_names.append(subj_name)
 
-            for student in students:
-                if student.id not in student_scores:
-                    student_scores[student.id] = {"name": student.name, "subjects": {}, "total": Decimal("0"), "fail_count": 0}
+            # 取得這個科目的所有考試項目
+            items = db.query(DailyGradeItem).filter(DailyGradeItem.class_subject_id == cs.id).order_by(DailyGradeItem.date).all()
 
-                # 先查學期成績
-                sg = db.query(SemesterGrade).filter(
-                    SemesterGrade.student_id == student.id,
-                    SemesterGrade.class_subject_id == cs.id,
-                    SemesterGrade.semester_id == semester_id,
-                ).first()
+            for item in items:
+                teacher = db.query(UserModel).filter(UserModel.id == item.created_by).first()
+                teacher_name = teacher.name if teacher else "-"
 
-                if sg and sg.semester_score is not None:
-                    score = float(sg.semester_score)
-                elif sg and sg.midterm_score is not None:
-                    # 只有期中成績，用期中分數
-                    score = float(sg.midterm_score)
+                # 計算這個考試的不及格率
+                grades = db.query(DailyGrade).filter(
+                    DailyGrade.daily_grade_item_id == item.id,
+                    DailyGrade.student_id.in_(student_ids)
+                ).all()
+
+                if grades:
+                    total = len(grades)
+                    fails = sum(1 for g in grades if Decimal(str(g.score)) < passing_score)
+                    fail_rate = round(fails / total * 100, 2)
                 else:
-                    # 沒有學期成績，從平時成績計算加權平均
-                    daily_grades = (
-                        db.query(DailyGrade)
-                        .join(DailyGradeItem)
-                        .filter(
-                            DailyGradeItem.class_subject_id == cs.id,
-                            DailyGrade.student_id == student.id,
-                        )
-                        .all()
-                    )
-                    if daily_grades:
-                        avg = sum(float(g.score) for g in daily_grades) / len(daily_grades)
-                        score = round(avg, 1)
-                    else:
-                        score = None
+                    fail_rate = 0.0
 
-                student_scores[student.id]["subjects"][subj_name] = score
-                if score is not None:
-                    student_scores[student.id]["total"] += Decimal(str(score))
-                    if Decimal(str(score)) < passing_score:
-                        student_scores[student.id]["fail_count"] += 1
+                exam_items.append({
+                    "id": item.id,
+                    "subject_name": subj_name,
+                    "title": item.title,
+                    "date": item.date.isoformat() if item.date else "",
+                    "teacher_name": teacher_name,
+                    "fail_rate": fail_rate,
+                    "class_subject_id": cs.id,
+                })
+
+        # 建立學生成績資料
+        student_scores = {}  # student_id -> {scores: {exam_item_id: score}, fail_count: int}
+        for student in students:
+            student_scores[student.id] = {
+                "name": student.name,
+                "student_no": student.student_no,
+                "class_number": student.class_number,
+                "scores": {},
+                "fail_count": 0,
+            }
+
+        # 填充成績
+        for exam in exam_items:
+            grades = db.query(DailyGrade).filter(
+                DailyGrade.daily_grade_item_id == exam["id"],
+                DailyGrade.student_id.in_(student_ids)
+            ).all()
+
+            for g in grades:
+                score = float(g.score)
+                student_scores[g.student_id]["scores"][exam["id"]] = round(score, 1)
+                if Decimal(str(score)) < passing_score:
+                    student_scores[g.student_id]["fail_count"] += 1
 
         # 排名（按總分）
         ranked = sorted(
             [(sid, data) for sid, data in student_scores.items()],
-            key=lambda x: x[1]["total"],
+            key=lambda x: sum(x[1]["scores"].values()) if x[1]["scores"] else 0,
             reverse=True,
         )
 
-        # 建立表格 - 符合格式要求的欄位結構
-        columns = ["學生編號|班級|姓名|學號"]
-        for subj_name in subject_names:
-            columns.append(subj_name)
+        # 建立表格
+        # 表頭欄位：第一欄空白，之後每個考試一欄（包含科目）
+        header1 = ["", "", "", "", ""]  # 排名、學生編號、班級、姓名、學號
+        header2 = ["排名", "學生編號", "班級", "姓名", "學號"]  # 第二行
+        header3 = []  # 測驗名稱
+        header4 = []  # 測驗日期
+        header5 = []  # 負責老師
+        header6 = []  # 不及格率
+
+        columns = ["排名", "學生編號", "班級", "姓名", "學號"]
+        for exam in exam_items:
+            columns.append(exam["subject_name"])
+            header3.append(exam["title"])
+            header4.append(exam["date"])
+            header5.append(exam["teacher_name"])
+            header6.append(f"{exam['fail_rate']:.2f}%")
+
         columns.append("不及格測驗")
+        header3.append("")
+        header4.append("")
+        header5.append("")
+        header6.append("次數")
+
+        # 建立學生資料列
         rows = []
-        for rank, (sid, data) in enumerate(ranked, 1):
-            student = next((s for s in students if s.id == sid), None)
-            student_no = student.student_no if student else "?"
-            class_number = student.class_number if student else "?"
+        for idx, (sid, data) in enumerate(ranked):
+            row = [
+                idx + 1,  # 排名
+                data["student_no"] or "",
+                cls.name,
+                data["name"],
+                str(data["class_number"]) if data["class_number"] else "",
+            ]
 
-            # 第一欄：學生識別
-            row = [f"{student_no}|初一甲|{data['name']}|{class_number}"]
-
-            # 各科分數
-            for subj_name in subject_names:
-                score = data["subjects"].get(subj_name)
+            for exam in exam_items:
+                score = data["scores"].get(exam["id"])
                 if score is not None:
                     if Decimal(str(score)) < passing_score:
                         cell = f"<span style=\"background-color:{fail_score_bg};\">{score}</span>"
                     else:
-                        cell = f"{score}"
+                        cell = str(score)
                     row.append(cell)
                 else:
                     row.append("-")
@@ -157,10 +194,11 @@ class DraftList(BaseSkill):
 
         return SkillResult(
             success=True,
-            message=f"已產生 {cls.name} 學期成績草榜，共 {len(ranked)} 名學生" + (f"（使用模板：{template.name}）" if template else ""),
+            message=f"已產生 {cls.name} 學期成績草榜，共 {len(ranked)} 名學生，{len(exam_items)} 個考試項目" + (f"（使用模板：{template.name}）" if template else ""),
             data={
                 "class_name": cls.name,
                 "student_count": len(ranked),
+                "exam_count": len(exam_items),
                 "template_used": template.name if template else "預設",
             },
             data_card={
@@ -169,6 +207,12 @@ class DraftList(BaseSkill):
                 "payload": {
                     "columns": columns,
                     "rows": rows,
+                    "headers": {
+                        "測驗名稱": header3,
+                        "測驗日期": header4,
+                        "負責老師": header5,
+                        "不及格率": header6,
+                    },
                     "style_config": style_config,
                 },
             },
@@ -181,11 +225,26 @@ class DraftList(BaseSkill):
                         "x_key": "name",
                         "y_key": "total",
                         "data": [
-                            {"name": data["name"], "total": float(data["total"])}
-                            for _, data in ranked
+                            {"rank": idx + 1, "name": data["name"], "student_no": data["student_no"], "total": float(sum(data["scores"].values()))}
+                            for idx, (_, data) in enumerate(ranked)
                         ],
                         "x_label": "學生",
                         "y_label": "總分",
+                    },
+                },
+                {
+                    "type": "chart",
+                    "title": f"{cls.name} 不及格次數分布",
+                    "payload": {
+                        "chart_type": "bar",
+                        "x_key": "name",
+                        "y_key": "fail_count",
+                        "data": [
+                            {"name": data["name"], "fail_count": data["fail_count"]}
+                            for _, data in ranked
+                        ],
+                        "x_label": "學生",
+                        "y_label": "不及格次數",
                     },
                 },
             ],

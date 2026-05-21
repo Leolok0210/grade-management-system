@@ -86,7 +86,13 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
               {pagedRows.map((row: any[], i: number) => (
                 <tr key={i}>
                   {row.map((cell: any, j: number) => (
-                    <td key={j} style={styles.td}>{cell}</td>
+                    <td
+                      key={j}
+                      style={styles.td}
+                      dangerouslySetInnerHTML={{
+                        __html: typeof cell === "string" ? cell : String(cell || "")
+                      }}
+                    />
                   ))}
                 </tr>
               ))}
