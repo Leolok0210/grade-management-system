@@ -22,6 +22,6 @@ def init_db():
     from app.models import (  # noqa: F401
         school, user, student, subject, daily_grade,
         semester_grade, draft, award, appeal, anomaly,
-        audit, passing_line, table_format,
+        audit, passing_line, table_format, conduct,
     )
     Base.metadata.create_all(bind=engine)

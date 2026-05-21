@@ -16,6 +16,7 @@ from app.skills.transcript.generate import TranscriptGenerate
 from app.skills.ai_enhanced.anomaly_detect import AnomalyDetect
 from app.skills.ai_enhanced.class_comparison import ClassComparison
 from app.skills.ai_enhanced.makeup_suggestion import MakeupSuggestion
+from app.skills.conduct import ConductDraftList, ConductAnalysis, ConductAssessmentInput
 
 _skills: dict[str, BaseSkill] = {}
 
@@ -38,6 +39,9 @@ _register(TranscriptGenerate())
 _register(AnomalyDetect())
 _register(ClassComparison())
 _register(MakeupSuggestion())
+_register(ConductDraftList())
+_register(ConductAnalysis())
+_register(ConductAssessmentInput())
 
 
 def get_skill(name: str) -> Optional[BaseSkill]:
