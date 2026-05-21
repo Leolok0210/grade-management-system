@@ -121,6 +121,13 @@
 
 ---
 
+## 部署連結
+
+- **前端：** https://frontend-f5ko2f63y-lok577450-8361s-projects.vercel.app
+- **後端：** https://hazy-bamboo-skeleton.ngrok-free.dev
+
+---
+
 ## 技術架構
 
 - **後端：** Python FastAPI + PostgreSQL + SQLAlchemy
