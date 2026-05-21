@@ -20,6 +20,9 @@ export function ChatWindow() {
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [welcomeHints, setWelcomeHints] = useState<string[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<{ file_id: string; filename: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,11 +39,41 @@ export function ChatWindow() {
     }).catch(() => {});
   }, []);
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const token = localStorage.getItem("access_token");
+      const baseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api/v1";
+      const response = await fetch(`${baseUrl}/chat/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      setUploadedFile({ file_id: data.file_id, filename: data.filename });
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSend = () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
-    sendMessage(text);
+    // 如果有上傳檔案，在訊息中附加檔案資訊
+    const messageWithFile = uploadedFile
+      ? `${text}\n[已上傳檔案: ${uploadedFile.filename}，路徑: /Users/leo/Downloads/${uploadedFile.filename}]`
+      : text;
+    sendMessage(messageWithFile);
+    setUploadedFile(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -166,6 +199,27 @@ export function ChatWindow() {
 
         {/* Input */}
         <div style={styles.inputArea}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".xlsx,.xls,.csv"
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || loading}
+            style={styles.uploadBtn}
+            title="上傳 Excel 檔案"
+          >
+            {isUploading ? "上傳中..." : "📎"}
+          </button>
+          {uploadedFile && (
+            <span style={styles.fileTag}>
+              {uploadedFile.filename}
+              <button onClick={() => setUploadedFile(null)} style={styles.fileTagClose}>✕</button>
+            </span>
+          )}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -293,5 +347,34 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 500,
+  },
+  uploadBtn: {
+    padding: "10px 14px",
+    background: "#f3f4f6",
+    color: "#555",
+    border: "1px solid #ddd",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 16,
+  },
+  fileTag: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "4px 10px",
+    background: "#e0e7ff",
+    color: "#4338ca",
+    borderRadius: 6,
+    fontSize: 12,
+    maxWidth: 180,
+  },
+  fileTagClose: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#666",
+    fontSize: 12,
+    padding: 0,
+    marginLeft: 2,
   },
 };
