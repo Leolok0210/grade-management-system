@@ -4,11 +4,12 @@ Agent Orchestrator - 意圖識別 → 技能調度 → 回應生成（串流版�
 
 import json
 import logging
-from typing import Union, AsyncIterator
+from typing import Union, AsyncIterator, Optional
 from dataclasses import dataclass
 from app.ai.router import MultiModelRouter
 from app.skills.registry import get_skill, get_tool_definitions_for_role
 from app.skills.base import SkillResult, UserContext
+from app.models.table_format import TableFormatTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ SYSTEM_PROMPT_TEMPLATE = """你是氹仔坊眾學校的成績管理AI助手。�
 使用者：{user_name}（{user_role}）
 
 {context_info}
+
+{table_format_info}
 
 重要規則：
 1. 當使用者的請求匹配某個技能時，你必須調用對應的 function，不要只用文字回覆
@@ -51,7 +54,17 @@ example output structure:
 | 測驗名稱 | 大測1 | 大測2 | 大測1 | ... | |
 | 測驗日期 | 2026-03-09 | 2026-03-30 | 2026-03-05 | ... | |
 | 負責老師 | 黃渝丹 | 黃渝丹 | 郭彥俊 | ... | |
-| 不及格率 | 25.00% | 21.43% | 32.14% | ... | 次數 |"""
+| 不及格率 | 25.00% | 21.43% | 32.14% | ... | 次數 |
+
+## 自然語言格式調整
+
+老師可以用自然語言要求調整格式，例如：
+- 「不及格用藍色標記」
+- 「加入排名欄位」
+- 「顯示各科平均分」
+- 「不及格率用紅字」
+
+請理解老師的格式要求，並在生成表格時套用。如果老師沒有特別指定，使用預設模板格式。"""
 
 
 @dataclass
@@ -104,18 +117,55 @@ def _build_context_info(db) -> str:
     return "\n".join(lines)
 
 
+def _build_table_format_info(db) -> str:
+    """取得可用的表格格式模板"""
+    templates = TableFormatTemplate.get_all_active(db)
+    if not templates:
+        return ""
+
+    lines = ["\n可用表格格式模板："]
+    for t in templates:
+        style_info = ""
+        if t.style_config:
+            if t.style_config.get("fail_score_bg"):
+                style_info = f" [不及格標記:{t.style_config['fail_score_bg']}]"
+            if t.style_config.get("fail_count_bg"):
+                style_info += f" [不及格次數:{t.style_config['fail_count_bg']}]"
+
+        default_mark = " (預設)" if t.is_default else ""
+        lines.append(f"  - {t.name}{default_mark}：{t.description or ''}{style_info}")
+
+    return "\n".join(lines)
+
+
 class AgentOrchestrator:
     def __init__(self, ai_router: MultiModelRouter):
         self.ai_router = ai_router
 
-    def _build_system_prompt(self, context: UserContext, db, current_semester: str = "2025-2026學年 第2學期") -> str:
+    def _build_system_prompt(
+        self,
+        context: UserContext,
+        db,
+        current_semester: str = "2025-2026學年 第2學期",
+        template_override: Optional[dict] = None,
+    ) -> str:
         context_info = _build_context_info(db) if db else ""
-        return SYSTEM_PROMPT_TEMPLATE.format(
+        table_format_info = _build_table_format_info(db) if db else ""
+
+        prompt = SYSTEM_PROMPT_TEMPLATE.format(
             current_semester=current_semester,
             user_name=context.name,
             user_role=context.role,
             context_info=context_info,
+            table_format_info=table_format_info,
         )
+
+        # 如果有 template override，附加到 prompt
+        if template_override:
+            prompt += f"\n\n## 目前使用格式模板：{template_override.get('name', '自訂')}\n"
+            prompt += json.dumps(template_override.get("style_config", {}), ensure_ascii=False, indent=2)
+
+        return prompt
 
     async def handle_message(
         self,

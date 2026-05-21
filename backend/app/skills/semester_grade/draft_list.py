@@ -8,6 +8,7 @@ from app.models.daily_grade import DailyGradeItem, DailyGrade
 from app.models.student import Student, Class
 from app.models.subject import ClassSubject, Subject
 from app.models.school import Semester
+from app.models.table_format import TableFormatTemplate
 
 
 class DraftList(BaseSkill):
@@ -19,6 +20,7 @@ class DraftList(BaseSkill):
             "class_id": {"type": "integer", "description": "班級ID"},
             "semester_id": {"type": "integer", "description": "學期ID"},
             "passing_score": {"type": "number", "description": "及格分數線，預設60"},
+            "template_name": {"type": "string", "description": "表格格式模板名稱（可選）"},
         },
         "required": ["class_id", "semester_id"],
     }
@@ -28,6 +30,22 @@ class DraftList(BaseSkill):
         class_id = params["class_id"]
         semester_id = params["semester_id"]
         passing_score = Decimal(str(params.get("passing_score", 60)))
+
+        # 取得格式模板
+        template = None
+        template_name = params.get("template_name")
+        if template_name:
+            template = db.query(TableFormatTemplate).filter(
+                TableFormatTemplate.name == template_name,
+                TableFormatTemplate.is_active == True,
+            ).first()
+        if not template:
+            template = TableFormatTemplate.get_default_template("draft_list", db)
+
+        # 讀取模板樣式設定
+        style_config = template.style_config if template else {}
+        fail_score_bg = style_config.get("fail_score_bg", "#ffcccc")
+        fail_count_bg = style_config.get("fail_count_bg", "#ff9999")
 
         cls = db.query(Class).filter(Class.id == class_id).first()
         if not cls:
@@ -121,29 +139,37 @@ class DraftList(BaseSkill):
                 score = data["subjects"].get(subj_name)
                 if score is not None:
                     if Decimal(str(score)) < passing_score:
-                        cell = f"{score}"
-                        fail_mark = True
+                        cell = f"<span style=\"background-color:{fail_score_bg};\">{score}</span>"
                     else:
                         cell = f"{score}"
-                        fail_mark = False
                     row.append(cell)
                 else:
                     row.append("-")
 
             # 不及格次數
-            row.append(data["fail_count"])
+            fail_count = data["fail_count"]
+            if fail_count > 0:
+                count_cell = f"<span style=\"background-color:{fail_count_bg};\"><b><i>{fail_count}</i></b></span>"
+            else:
+                count_cell = "0"
+            row.append(count_cell)
             rows.append(row)
 
         return SkillResult(
             success=True,
-            message=f"已產生 {cls.name} 學期成績草榜，共 {len(ranked)} 名學生",
-            data={"class_name": cls.name, "student_count": len(ranked)},
+            message=f"已產生 {cls.name} 學期成績草榜，共 {len(ranked)} 名學生" + (f"（使用模板：{template.name}）" if template else ""),
+            data={
+                "class_name": cls.name,
+                "student_count": len(ranked),
+                "template_used": template.name if template else "預設",
+            },
             data_card={
                 "type": "table",
                 "title": f"{cls.name} 學期成績草榜",
                 "payload": {
                     "columns": columns,
                     "rows": rows,
+                    "style_config": style_config,
                 },
             },
             data_cards=[
