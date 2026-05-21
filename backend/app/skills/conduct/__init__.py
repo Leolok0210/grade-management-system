@@ -52,13 +52,13 @@ class ConductDraftList(BaseSkill):
             row = [
                 student.class_number,
                 student.name,
-                ca.欠作業 if ca else 0,
-                ca.欠課本 if ca else 0,
-                ca.上課違規 if ca else 0,
-                ca.儀表不符 if ca else 0,
-                ca.遲到 if ca else 0,
-                ca.缺席 if ca else 0,
-                ca.請假 if ca else 0,
+                ca.fail_homework if ca else 0,
+                ca.fail_textbook if ca else 0,
+                ca.fail_classroom if ca else 0,
+                ca.fail_uniform if ca else 0,
+                ca.fail_late if ca else 0,
+                ca.fail_absent if ca else 0,
+                ca.leave_hours if ca else 0,
                 ca.before_rewards if ca else 0,
                 ca.before_minor_awards if ca else 0,
                 ca.before_major_awards if ca else 0,
@@ -123,14 +123,14 @@ class ConductAnalysis(BaseSkill):
         for student in students:
             ca = assessments.get(student.id)
             if ca:
-                total_violations = ca.欠作業 + ca.欠課本 + ca.上課違規 + ca.儀表不符 + ca.遲到 + ca.缺席
+                total_violations = ca.fail_homework + ca.fail_textbook + ca.fail_classroom + ca.fail_uniform + ca.fail_late + ca.fail_absent
                 analysis_data.append({
                     "name": student.name,
                     "class_number": student.class_number,
                     "total_violations": total_violations,
-                    "欠作業": ca.欠作業,
-                    "欠課本": ca.欠課本,
-                    "上課違規": ca.上課違規,
+                    "fail_homework": ca.fail_homework,
+                    "fail_textbook": ca.fail_textbook,
+                    "fail_classroom": ca.fail_classroom,
                     "current_assessment": ca.current_assessment,
                 })
 
@@ -153,12 +153,12 @@ class ConductAnalysis(BaseSkill):
 
         # 圖表2：各類型統計
         type_stats = {
-            "欠作業": sum(a.欠作業 for a in assessments.values()),
-            "欠課本": sum(a.欠課本 for a in assessments.values()),
-            "上課違規": sum(a.上課違規 for a in assessments.values()),
-            "儀表不符": sum(a.儀表不符 for a in assessments.values()),
-            "遲到": sum(a.遲到 for a in assessments.values()),
-            "缺席": sum(a.缺席 for a in assessments.values()),
+            "欠作業": sum(a.fail_homework for a in assessments.values()),
+            "欠課本": sum(a.fail_textbook for a in assessments.values()),
+            "上課違規": sum(a.fail_classroom for a in assessments.values()),
+            "儀表不符": sum(a.fail_uniform for a in assessments.values()),
+            "遲到": sum(a.fail_late for a in assessments.values()),
+            "缺席": sum(a.fail_absent for a in assessments.values()),
         }
 
         pie_chart = {

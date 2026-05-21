@@ -69,7 +69,7 @@ class RegularViolationCreate(BaseModel):
     semester_id: int
     violation_type: str  # 欠作業/欠課本/上課違規/儀表不符/遲到/缺席/請假
     count: int = 0
-    date: Optional[date] = None
+    record_date: Optional[date] = None
 
 
 @router.post("/violations")
@@ -89,7 +89,7 @@ async def register_violation(
         semester_id=data.semester_id,
         violation_type=data.violation_type,
         count=data.count,
-        date=data.date,
+        record_date=data.record_date,
         created_by=current_user.id,
     )
     db.add(rv)
@@ -104,13 +104,13 @@ async def register_violation(
 class ConductAssessmentCreate(BaseModel):
     student_id: int
     semester_id: int
-    欠作業: int = 0
-    欠課本: int = 0
-    上課違規: int = 0
-    儀表不符: int = 0
-    遲到: int = 0
-    缺席: int = 0
-    請假: int = 0
+    fail_homework: int = 0
+    fail_textbook: int = 0
+    fail_classroom: int = 0
+    fail_uniform: int = 0
+    fail_late: int = 0
+    fail_absent: int = 0
+    leave_hours: int = 0
     before_rewards: int = 0
     before_minor_awards: int = 0
     before_major_awards: int = 0
@@ -187,13 +187,13 @@ async def get_class_conduct(
                 "student_no": student.student_no,
                 "name": student.name,
                 "class_number": student.class_number,
-                "欠作業": ca.欠作業,
-                "欠課本": ca.欠課本,
-                "上課違規": ca.上課違規,
-                "儀表不符": ca.儀表不符,
-                "遲到": ca.遲到,
-                "缺席": ca.缺席,
-                "請假": ca.請假,
+                "fail_homework": ca.fail_homework,
+                "fail_textbook": ca.fail_textbook,
+                "fail_classroom": ca.fail_classroom,
+                "fail_uniform": ca.fail_uniform,
+                "fail_late": ca.fail_late,
+                "fail_absent": ca.fail_absent,
+                "leave_hours": ca.leave_hours,
                 "before_rewards": ca.before_rewards,
                 "before_minor_awards": ca.before_minor_awards,
                 "before_major_awards": ca.before_major_awards,
@@ -294,13 +294,13 @@ async def import_conduct_from_excel(
             ca_data = {
                 "student_id": student.id,
                 "semester_id": semester_id,
-                "欠作業": 欠作業 or 0,
-                "欠課本": 欠課本 or 0,
-                "上課違規": 上課違規 or 0,
-                "儀表不符": 儀表不符 or 0,
-                "遲到": 遲到 or 0,
-                "缺席": 缺席 or 0,
-                "請假": 請假 or 0,
+                "fail_homework": 欠作業 or 0,
+                "fail_textbook": 欠課本 or 0,
+                "fail_classroom": 上課違規 or 0,
+                "fail_uniform": 儀表不符 or 0,
+                "fail_late": 遲到 or 0,
+                "fail_absent": 缺席 or 0,
+                "leave_hours": 請假 or 0,
                 "before_rewards": before_rewards or 0,
                 "after_rewards": after_rewards or 0,
                 "volunteer_hours": float(volunteer_hours or 0),

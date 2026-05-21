@@ -1,7 +1,8 @@
 """
 德育管理模型 - 獎懲、違紀、操行評估
 """
-from datetime import datetime, date
+from datetime import datetime
+import datetime as dt
 from sqlalchemy import String, Integer, Text, Float, Boolean, ForeignKey, DateTime, Date
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -18,13 +19,13 @@ class RewardPunishment(Base):
     reward_type: Mapped[str] = mapped_column(String(20), nullable=True)  # 優點/小功/大功
     reward_count: Mapped[int] = mapped_column(Integer, default=0)
     reward_reason: Mapped[str] = mapped_column(Text, nullable=True)
-    reward_date: Mapped[date] = mapped_column(Date, nullable=True)
+    reward_date: Mapped[dt.date] = mapped_column(Date, nullable=True)
 
     # 懲罰記錄
     punishment_type: Mapped[str] = mapped_column(String(20), nullable=True)  # 缺點/小過/大過
     punishment_count: Mapped[int] = mapped_column(Integer, default=0)
     punishment_reason: Mapped[str] = mapped_column(Text, nullable=True)
-    punishment_date: Mapped[date] = mapped_column(Date, nullable=True)
+    punishment_date: Mapped[dt.date] = mapped_column(Date, nullable=True)
 
     # 狀態
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -44,7 +45,7 @@ class RegularViolation(Base):
     # 違規類型：欠作業/欠課本/上課違規/儀表不符/遲到/缺席/請假
     violation_type: Mapped[str] = mapped_column(String(50), nullable=False)
     count: Mapped[int] = mapped_column(Integer, default=0)
-    date: Mapped[date] = mapped_column(Date, nullable=True)
+    record_date: Mapped[dt.date] = mapped_column(Date, nullable=True)
 
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -58,13 +59,13 @@ class ConductAssessment(Base):
     semester_id: Mapped[int] = mapped_column(ForeignKey("academic_years.id"), nullable=False)
 
     # 常規違紀統計（抵銷前）
-    欠作業: Mapped[int] = mapped_column(Integer, default=0)
-    欠課本: Mapped[int] = mapped_column(Integer, default=0)
-    上課違規: Mapped[int] = mapped_column(Integer, default=0)
-    儀表不符: Mapped[int] = mapped_column(Integer, default=0)
-    遲到: Mapped[int] = mapped_column(Integer, default=0)
-    缺席: Mapped[int] = mapped_column(Integer, default=0)
-    請假: Mapped[int] = mapped_column(Integer, default=0)
+    fail_homework: Mapped[int] = mapped_column(Integer, default=0)  # 欠作業
+    fail_textbook: Mapped[int] = mapped_column(Integer, default=0)  # 欠課本
+    fail_classroom: Mapped[int] = mapped_column(Integer, default=0)  # 上課違規
+    fail_uniform: Mapped[int] = mapped_column(Integer, default=0)  # 儀表不符
+    fail_late: Mapped[int] = mapped_column(Integer, default=0)  # 遲到
+    fail_absent: Mapped[int] = mapped_column(Integer, default=0)  # 缺席
+    leave_hours: Mapped[int] = mapped_column(Integer, default=0)  # 請假
 
     # 抵銷前統計
     before_1_5_fails: Mapped[int] = mapped_column(Integer, default=0)  # 1-5產生缺點
