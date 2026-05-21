@@ -168,9 +168,20 @@ class AgentOrchestrator:
         self,
         context: UserContext,
         db,
-        current_semester: str = "2025-2026學年 第2學期",
+        current_semester: Optional[str] = None,
         template_override: Optional[dict] = None,
     ) -> str:
+        # 如果沒有指定學期，從資料庫查詢目前學期
+        if current_semester is None and db:
+            from app.models.school import Semester, AcademicYear
+            sem = db.query(Semester).filter(Semester.is_current == True).first()
+            if sem:
+                ay = db.query(AcademicYear).filter(AcademicYear.id == sem.academic_year_id).first()
+                ay_label = ay.label if ay else "未知學年"
+                current_semester = f"{ay_label} 第{sem.semester}學期"
+            else:
+                current_semester = "2025-2026學年 第1學期"
+
         context_info = _build_context_info(db) if db else ""
         table_format_info = _build_table_format_info(db) if db else ""
 
