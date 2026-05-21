@@ -255,8 +255,6 @@ async def import_conduct_from_excel(
     file_path = req.file_path
     class_id = req.class_id
     semester_id = req.semester_id
-    """從 Excel 匯入操行資料"""
-    import openpyxl
 
     try:
         wb = openpyxl.load_workbook(file_path)
@@ -345,6 +343,108 @@ async def import_conduct_from_excel(
             else:
                 existing = ConductAssessment(**ca_data, created_by=current_user.id)
                 db.add(existing)
+
+            imported += 1
+
+        db.commit()
+        return {"message": f"成功匯入 {imported} 筆記錄"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RewardExcelImportRequest(BaseModel):
+    file_path: str
+    class_id: int
+    semester_id: int
+
+
+@router.post("/rewards-excel-import")
+async def import_rewards_punishments_from_excel(
+    req: RewardExcelImportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """從 Excel 匯入獎懲資料（獎懲記錄列表格式）"""
+    import openpyxl
+    import re
+
+    file_path = req.file_path
+    class_id = req.class_id
+    semester_id = req.semester_id
+
+    try:
+        wb = openpyxl.load_workbook(file_path)
+        ws = wb.active
+
+        imported = 0
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+            # Row format: (學生編號, 班別, 學號, 姓名, 優點項目, 缺點項目)
+            if not row[2]:  # 學號
+                continue
+
+            class_number = int(row[2]) if row[2] else None
+            name = row[3] if len(row) > 3 else ""
+            reward_text = row[4] if len(row) > 4 else None
+            punishment_text = row[5] if len(row) > 5 else None
+
+            # 解析優點次數
+            reward_count = 0
+            reward_reason = None
+            if reward_text and reward_text != "----":
+                # 計算 "按章應記優點X次" 的次數
+                matches = re.findall(r'按章應記優點(\d+)次', reward_text)
+                reward_count = sum(int(m) for m in matches)
+                reward_reason = reward_text
+
+            # 解析缺點次數
+            punishment_count = 0
+            punishment_reason = None
+            if punishment_text and punishment_text != "----":
+                # 計算 "按章應記缺點X個" 的個數
+                matches = re.findall(r'按章應記缺點(\d+)個', punishment_text)
+                punishment_count = sum(int(m) for m in matches)
+                punishment_reason = punishment_text
+
+            # 找學生
+            student = db.query(Student).filter(
+                Student.class_id == class_id,
+                Student.class_number == class_number,
+            ).first()
+
+            if not student:
+                continue
+
+            # 檢查是否已有獎懲記錄
+            existing = db.query(RewardPunishment).filter(
+                RewardPunishment.student_id == student.id,
+                RewardPunishment.semester_id == semester_id,
+            ).first()
+
+            if existing:
+                # 更新現有記錄
+                if reward_count > 0:
+                    existing.reward_count = reward_count
+                    existing.reward_reason = reward_reason
+                    existing.reward_type = "優點"
+                if punishment_count > 0:
+                    existing.punishment_count = punishment_count
+                    existing.punishment_reason = punishment_reason
+                    existing.punishment_type = "缺點"
+            else:
+                # 新增記錄
+                rp = RewardPunishment(
+                    student_id=student.id,
+                    semester_id=semester_id,
+                    reward_type="優點" if reward_count > 0 else None,
+                    reward_count=reward_count,
+                    reward_reason=reward_reason,
+                    punishment_type="缺點" if punishment_count > 0 else None,
+                    punishment_count=punishment_count,
+                    punishment_reason=punishment_reason,
+                    created_by=current_user.id,
+                )
+                db.add(rp)
 
             imported += 1
 
