@@ -237,14 +237,24 @@ async def get_student_rewards(
     ]
 
 
+class ExcelImportRequest(BaseModel):
+    file_path: str
+    class_id: int
+    semester_id: int
+
+
 @router.post("/excel-import")
 async def import_conduct_from_excel(
-    file_path: str,
-    class_id: int,
-    semester_id: int,
+    req: ExcelImportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """從 Excel 匯入操行資料"""
+    import openpyxl
+
+    file_path = req.file_path
+    class_id = req.class_id
+    semester_id = req.semester_id
     """從 Excel 匯入操行資料"""
     import openpyxl
 
@@ -253,28 +263,40 @@ async def import_conduct_from_excel(
         ws = wb.active
 
         imported = 0
-        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+        for i, row in enumerate(ws.iter_rows(min_row=3, values_only=True)):
             if not row[0]:
                 continue
 
-            class_number = row[0]  # 學號
+            try:
+                class_number = int(row[0]) if row[0] else None
+                if class_number is None:
+                    continue
+            except (ValueError, TypeError):
+                continue
+
             name = row[1] if len(row) > 1 else ""
-            欠作業 = row[2] if len(row) > 2 else 0
-            欠課本 = row[3] if len(row) > 3 else 0
-            上課違規 = row[4] if len(row) > 4 else 0
-            儀表不符 = row[5] if len(row) > 5 else 0
-            遲到 = row[6] if len(row) > 6 else 0
-            缺席 = row[7] if len(row) > 7 else 0
-            請假 = row[8] if len(row) > 8 else 0
-            before_rewards = row[16] if len(row) > 16 else 0
-            after_rewards = row[25] if len(row) > 25 else 0
-            volunteer_hours = row[28] if len(row) > 28 else 0
-            max_assessment = row[30] if len(row) > 30 else None
-            previous_assessment = row[31] if len(row) > 31 else None
-            current_assessment = row[32] if len(row) > 32 else None
-            change = row[33] if len(row) > 33 else None
-            cumulative_fails = row[34] if len(row) > 34 else 0
-            comment = row[35] if len(row) > 35 else None
+            fail_homework = int(row[2]) if row[2] else 0
+            fail_textbook = int(row[3]) if row[3] else 0
+            fail_classroom = int(row[4]) if row[4] else 0
+            fail_uniform = int(row[5]) if row[5] else 0
+            fail_late = int(row[6]) if row[6] else 0
+            fail_absent = int(row[7]) if row[7] else 0
+            leave_hours = int(row[8]) if row[8] else 0
+            before_rewards = int(row[16]) if row[16] else 0
+            before_minor_awards = int(row[17]) if row[17] else 0
+            before_major_awards = int(row[18]) if row[18] else 0
+            after_rewards = int(row[26]) if row[26] else 0
+            after_minor_awards = int(row[27]) if row[27] else 0
+            after_major_awards = int(row[28]) if row[28] else 0
+            volunteer_hours = float(row[29]) if row[29] else 0
+            offset_count = str(row[30]) if row[30] else None
+            max_assessment = str(row[31]) if row[31] else None
+            previous_assessment = str(row[32]) if row[32] else None
+            current_assessment = str(row[33]) if row[33] else None
+            change = str(row[34]) if row[34] else None
+            cumulative_fails_val = row[35]
+            cumulative_fails = int(cumulative_fails_val) if cumulative_fails_val and str(cumulative_fails_val).isdigit() else 0
+            comment = str(row[36]) if row[36] else None
 
             # 找學生
             student = db.query(Student).filter(
@@ -294,21 +316,26 @@ async def import_conduct_from_excel(
             ca_data = {
                 "student_id": student.id,
                 "semester_id": semester_id,
-                "fail_homework": 欠作業 or 0,
-                "fail_textbook": 欠課本 or 0,
-                "fail_classroom": 上課違規 or 0,
-                "fail_uniform": 儀表不符 or 0,
-                "fail_late": 遲到 or 0,
-                "fail_absent": 缺席 or 0,
-                "leave_hours": 請假 or 0,
-                "before_rewards": before_rewards or 0,
-                "after_rewards": after_rewards or 0,
-                "volunteer_hours": float(volunteer_hours or 0),
+                "fail_homework": fail_homework,
+                "fail_textbook": fail_textbook,
+                "fail_classroom": fail_classroom,
+                "fail_uniform": fail_uniform,
+                "fail_late": fail_late,
+                "fail_absent": fail_absent,
+                "leave_hours": leave_hours,
+                "before_rewards": before_rewards,
+                "before_minor_awards": before_minor_awards,
+                "before_major_awards": before_major_awards,
+                "after_rewards": after_rewards,
+                "after_minor_awards": after_minor_awards,
+                "after_major_awards": after_major_awards,
+                "volunteer_hours": volunteer_hours,
+                "offset_count": offset_count,
                 "max_assessment": max_assessment,
                 "previous_assessment": previous_assessment,
                 "current_assessment": current_assessment,
                 "change": change,
-                "cumulative_fails": cumulative_fails or 0,
+                "cumulative_fails": cumulative_fails,
                 "comment": comment,
             }
 
