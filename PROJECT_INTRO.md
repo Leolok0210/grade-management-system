@@ -2,13 +2,13 @@
 
 ## 一句話介紹
 
-> 老師用說的就能管理成績——「查看初一甲數學排名」，AI 自動查詢、分析、產生表格。
+> 老師用說的就能管理成績與德育——「查看初一甲數學排名」，AI 自動查詢、分析、產生表格。
 
 ---
 
 ## 這是什麼？
 
-一個為中學設計的 **AI 對話式成績管理系統**。老師不需要學習任何軟體操作，只要像聊天一樣輸入需求，AI 就會自動完成工作。
+一個為中學設計的 **AI 對話式成績與德育管理系統**。老師不需要學習任何軟體操作，只要像聊天一樣輸入需求，AI 就會自動完成工作。
 
 ---
 
@@ -81,6 +81,39 @@
 → 自動產生可列印的成績單
 ```
 
+### 🎖️ 獎懲管理
+```
+「登記學生5號一個優點，原因：熱心服務」
+→ 獎懲記錄直接寫入資料庫
+```
+
+### 📏 常規記錄
+```
+「查看初一甲的常規違紀統計」
+→ 顯示欠作業、遲到、缺席等統計表格
+```
+
+### 📊 操行評估
+```
+「產生初一甲的操行評估草榜」
+→ 自動計算抵銷前後的缺點/優點，產生操行等級
+```
+
+### 📈 德育分析
+```
+「分析初一甲的違紀情況」
+→ 產生違紀分布圖、類型統計圖
+```
+
+### 📋 德育報表
+```
+「產生初一甲班級月報」
+「產生學生5號的個人德育報告」
+「產生獎懲統計報表」
+「產生常規違紀報表」
+→ 多種德育報表，支援匯出
+```
+
 ---
 
 ## 跟傳統系統有什麼不同？
@@ -94,6 +127,7 @@
 | 異常發現 | 靠老師肉眼 | AI 統計偵測 |
 | 補考名單 | 逐科篩選 | 一鍵產生 |
 | 草榜 | 手工拼湊 | 自動產生含排名 |
+| 德育管理 | 分散在不同表 | AI 對話式管理 |
 
 ---
 
@@ -107,6 +141,8 @@
 6. **批次操作** — Excel 匯入匯出，大量成績一次處理
 7. **資料安全** — AI 不編造數據，所有結果來自資料庫真實查詢
 8. **權限控制** — 不同角色只能使用對應功能
+9. **德育整合** — 獎懲、常規違紀、操行評估一體化管理
+10. **多模型路由** — 支援 OpenAI / Anthropic / 本地模型，按任務類型自動選擇最適模型
 
 ---
 
@@ -130,10 +166,81 @@
 
 ## 技術架構
 
-- **後端：** Python FastAPI + PostgreSQL + SQLAlchemy
+- **後端：** Python FastAPI + PostgreSQL + SQLAlchemy + Alembic（資料庫迁移）
 - **前端：** React + TypeScript + Vite
-- **AI：** OpenAI-compatible LLM（qwen3.5-flash）+ Function Calling
-- **部署：** Docker Compose（可一鍵部署到學校伺服器）
+- **AI：** 多模型路由（OpenAI-compatible / Anthropic / Ollama）+ Function Calling
+- **技能系統：** 20 個 AI 技能，按角色權限控制
+- **部署：** Docker Compose（一鍵部署）+ Vercel（前端）
+
+---
+
+## AI 技能清單（20 個）
+
+### 日常成績（4）
+| 技能 | 說明 |
+|------|------|
+| `daily_grade.check` | 查詢日常成績 |
+| `daily_grade.register` | 登記日常成績 |
+| `daily_grade.analyze` | 分析日常成績 |
+| `daily_grade.report` | 產生日常成績報表 |
+
+### 學期成績（3）
+| 技能 | 說明 |
+|------|------|
+| `semester_grade.register` | 登記學期成績 |
+| `semester_grade.check` | 查詢學期成績 |
+| `draft_list` | 產生學期成績草榜 |
+
+### 系統功能（2）
+| 技能 | 說明 |
+|------|------|
+| `system.import_excel` | Excel 匯入 |
+| `system.export_excel` | Excel 匯出 |
+
+### 成績單（1）
+| 技能 | 說明 |
+|------|------|
+| `transcript.generate` | 產生成績單 PDF |
+
+### AI 增強分析（3）
+| 技能 | 說明 |
+|------|------|
+| `ai_enhanced.anomaly_detect` | 成績異常偵測 |
+| `ai_enhanced.class_comparison` | 班級對比分析 |
+| `ai_enhanced.makeup_suggestion` | 補考建議 |
+
+### 德育管理（7）
+| 技能 | 說明 |
+|------|------|
+| `conduct.draft_list` | 常規記錄草榜 |
+| `conduct.analysis` | 德育分析（違紀分布圖、類型統計） |
+| `conduct.assessment_input` | 操行評估輸入 |
+| `conduct.class_monthly_report` | 班級月報 |
+| `conduct.student_individual_report` | 學生個人德育報告 |
+| `conduct.rewards_punishments_report` | 獎懲統計報表 |
+| `conduct.regular_violations_report` | 常規違紀報表 |
+
+---
+
+## 資料模型
+
+| 模型 | 說明 |
+|------|------|
+| School / Campus / AcademicYear / Semester | 學校組織架構 |
+| Class / Student | 班級與學生 |
+| Subject / ClassSubject | 科目與班級科目（含成績權重） |
+| User | 使用者（admin / dept_head / teacher） |
+| DailyGradeItem / DailyGrade | 日常成績項目與成績 |
+| SemesterGrade / MakeupExam | 學期成績與補考 |
+| DraftGradeList | 成績草榜 |
+| AwardType / StudentAward | 獎項類型與學生獲獎 |
+| GradeAnomaly | 成績異常記錄 |
+| GradeAppeal | 成績申訴 |
+| PassingLine | 及格分數線 |
+| TableFormatTemplate | 表格格式模板 |
+| RewardPunishment | 獎懲記錄 |
+| RegularViolation | 常規違紀 |
+| ConductAssessment | 操行評估 |
 
 ---
 
@@ -142,6 +249,15 @@
 - [ ] 多班級支援（初一甲乙丙丁...）
 - [ ] 家長端查詢（家長只能看自己孩子成績）
 - [ ] 微信/短信通知家長成績
-- [ ] 成績申訴流程
+- [ ] 成績申訴流程完善
 - [ ] 歷年成績趨勢分析
-- [ ] 更多 AI 分析（班級對比、學期預測）
+- [ ] 更多 AI 分析（學期預測）
+- [ ] 成績趨勢分析技能（`trend_analysis`）
+- [ ] 班級學期/學年回顧技能（`semester_review` / `year_review`）
+- [ ] 光榮榜技能（`honor_roll`）
+- [ ] 獎項登記技能（`award`）
+- [ ] 及格線設定技能（`passing_line`）
+- [ ] 申訴處理技能（`appeal_handle`）
+- [ ] 通知技能（`notify`）
+- [ ] 批量成績單產生（`batch_generate`）
+- [ ] 學期成績分析技能（`semester_grade.analyze`）
