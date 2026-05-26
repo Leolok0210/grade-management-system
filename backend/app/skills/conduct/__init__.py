@@ -109,7 +109,6 @@ class ConductAnalysis(BaseSkill):
         students = db.query(Student).filter(Student.class_id == class_id).order_by(Student.class_number).all()
         student_ids = [s.id for s in students]
 
-        # 取得操行評估 - 不使用 semester_id 過濾，因為 FK 是 academic_year_id
         assessments = {a.student_id: a for a in db.query(ConductAssessment).filter(ConductAssessment.student_id.in_(student_ids)).all()}
 
         # 統計分析
@@ -127,27 +126,17 @@ class ConductAnalysis(BaseSkill):
                     "fail_homework": ca.fail_homework,
                     "fail_textbook": ca.fail_textbook,
                     "fail_classroom": ca.fail_classroom,
+                    "fail_uniform": ca.fail_uniform,
+                    "fail_late": ca.fail_late,
+                    "fail_absent": ca.fail_absent,
+                    "leave_hours": ca.leave_hours,
                     "current_assessment": ca.current_assessment,
                 })
 
         # 按違紀次數排序
         analysis_data.sort(key=lambda x: x["total_violations"], reverse=True)
 
-        # 圖表1：違紀分布
-        violation_chart = {
-            "type": "chart",
-            "title": f"{cls.name} 違紀情況統計",
-            "payload": {
-                "chart_type": "bar",
-                "x_key": "name",
-                "y_key": "total_violations",
-                "data": analysis_data[:10],  # 前10名
-                "x_label": "學生",
-                "y_label": "違紀次數",
-            },
-        }
-
-        # 圖表2：各類型統計
+        # 各類型統計
         type_stats = {
             "欠作業": sum(a.fail_homework for a in assessments.values()),
             "欠課本": sum(a.fail_textbook for a in assessments.values()),
@@ -157,6 +146,23 @@ class ConductAnalysis(BaseSkill):
             "缺席": sum(a.fail_absent for a in assessments.values()),
         }
 
+        total_violation_count = sum(type_stats.values())
+
+        # 圖表1：違紀分布
+        violation_chart = {
+            "type": "chart",
+            "title": f"{cls.name} 違紀情況統計",
+            "payload": {
+                "chart_type": "bar",
+                "x_key": "name",
+                "y_key": "total_violations",
+                "data": analysis_data[:10],
+                "x_label": "學生",
+                "y_label": "違紀次數",
+            },
+        }
+
+        # 圖表2：各類型統計
         pie_chart = {
             "type": "chart",
             "title": f"{cls.name} 違紀類型分布",
@@ -166,10 +172,59 @@ class ConductAnalysis(BaseSkill):
             },
         }
 
+        # === AI 分析 prompt ===
+        stats_summary = f"""
+{cls.name} 常規記錄統計數據：
+
+基本統計：
+- 總學生數：{total_students}
+- 總違紀次數：{total_violation_count}
+- 人均違紀：{round(total_violation_count / total_students, 2) if total_students > 0 else 0}
+
+各類型統計：
+{chr(10).join(f'- {k}: {v}次' for k, v in type_stats.items())}
+
+違紀前5名：
+{chr(10).join(f'- 第{i+1}名：{d["name"]}，共{d["total_violations"]}次（欠作業{d["fail_homework"]}、欠課本{d["fail_textbook"]}）' for i, d in enumerate(analysis_data[:5]))}
+
+違紀為0的學生：{', '.join([d['name'] for d in analysis_data if d['total_violations'] == 0]) or '無'}
+"""
+
+        ai_prompt = f"""你是氹仔坊眾學校的德育管理分析專家。請根據以下常規記錄統計數據，產出一份深度分析報告。
+
+要求：
+1. 用繁體中文
+2. 分析整體違紀情況（是否嚴重/正常/輕微）
+3. 指出主要違紀類型（哪些問題最需要關注）
+4. 分析特殊案例（個別學生是否需要特別關注）
+5. 給出改善建議（如何減少違紀、提升常規表現）
+6. 總結用 3-5 句話
+
+統計數據：
+{stats_summary}
+"""
+
+        summary_line = f"{cls.name} 常規記錄分析完成，共 {total_students} 名學生，總違紀 {total_violation_count} 次"
+
         return SkillResult(
             success=True,
-            message=f"已完成 {cls.name} 常規記錄分析",
-            data={"class_name": cls.name, "student_count": total_students},
+            message=f"__STREAM__{summary_line}\n\n",
+            data={
+                "class_name": cls.name,
+                "student_count": total_students,
+                "total_violations": total_violation_count,
+                "type_stats": type_stats,
+                "top_violators": analysis_data[:5],
+                "_ai_prompt": ai_prompt,
+            },
+            data_card={
+                "type": "table",
+                "title": f"{cls.name} 違紀排名",
+                "payload": {
+                    "columns": ["排名", "姓名", "欠作業", "欠課本", "上課違規", "儀表不符", "遲到", "缺席", "總計"],
+                    "rows": [[i+1, d["name"], d["fail_homework"], d["fail_textbook"], d["fail_classroom"], d["fail_uniform"], d["fail_late"], d["fail_absent"], d["total_violations"]] for i, d in enumerate(analysis_data[:15])]
+                },
+            },
             data_cards=[violation_chart, pie_chart],
         )
 
