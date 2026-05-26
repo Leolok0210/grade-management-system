@@ -7,6 +7,7 @@ from app.skills.daily_grade.check import DailyGradeCheck
 from app.skills.daily_grade.register import DailyGradeRegister
 from app.skills.daily_grade.analyze import DailyGradeAnalyze
 from app.skills.daily_grade.report import DailyGradeReport
+from app.skills.daily_grade.query import DailyGradeQuery
 from app.skills.semester_grade.register import SemesterGradeRegister
 from app.skills.semester_grade.check import SemesterGradeCheck
 from app.skills.semester_grade.draft_list import DraftList
@@ -36,6 +37,7 @@ _register(DailyGradeCheck())
 _register(DailyGradeRegister())
 _register(DailyGradeAnalyze())
 _register(DailyGradeReport())
+_register(DailyGradeQuery())
 _register(SemesterGradeRegister())
 _register(SemesterGradeCheck())
 _register(DraftList())
