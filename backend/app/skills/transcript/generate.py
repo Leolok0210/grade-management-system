@@ -11,7 +11,10 @@ from app.models.subject import ClassSubject, Subject
 from app.models.school import Semester
 
 EXPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "exports")
-os.makedirs(EXPORT_DIR, exist_ok=True)
+try:
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+except OSError:
+    pass  # Vercel read-only filesystem
 
 
 class TranscriptGenerate(BaseSkill):

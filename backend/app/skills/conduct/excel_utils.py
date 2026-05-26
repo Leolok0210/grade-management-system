@@ -8,7 +8,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 
 EXPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "exports")
-os.makedirs(EXPORT_DIR, exist_ok=True)
+try:
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+except OSError:
+    pass  # Vercel read-only filesystem
 
 HEADER_FONT = Font(bold=True, size=11, color="FFFFFF")
 HEADER_FILL = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")

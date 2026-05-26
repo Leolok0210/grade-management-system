@@ -15,8 +15,15 @@ from app.ai.router import MultiModelRouter
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 EXPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "exports")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(EXPORT_DIR, exist_ok=True)
+
+def ensure_upload_export_dirs():
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        os.makedirs(EXPORT_DIR, exist_ok=True)
+    except OSError:
+        pass  # Vercel read-only filesystem
+
+ensure_upload_export_dirs()
 
 router = APIRouter(prefix="/chat", tags=["聊天"])
 

@@ -8,7 +8,15 @@ from app.models.student import Student
 from app.models.subject import ClassSubject
 
 EXPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "exports")
-os.makedirs(EXPORT_DIR, exist_ok=True)
+
+
+def ensure_export_dir():
+    try:
+        os.makedirs(EXPORT_DIR, exist_ok=True)
+    except OSError:
+        pass  # Vercel read-only filesystem
+
+ensure_export_dir()
 
 
 class ExportExcel(BaseSkill):
