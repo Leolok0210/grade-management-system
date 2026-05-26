@@ -25,6 +25,9 @@ class DailyGradeQuery(BaseSkill):
     async def execute(self, params: dict, context: UserContext, db) -> SkillResult:
         class_subject_id = params["class_subject_id"]
         query_type = params["query_type"]
+        # 支援 fail_count 作為 fail 的別名
+        if query_type == "fail_count":
+            query_type = "fail"
         limit = params.get("limit", 5)
 
         # 取得班級科目資訊
