@@ -36,10 +36,8 @@ class ConductDraftList(BaseSkill):
         student_ids = [s.id for s in students]
 
         # 取得操行評估
-        query = db.query(ConductAssessment).filter(ConductAssessment.student_id.in_(student_ids))
-        if semester_id:
-            query = query.filter(ConductAssessment.semester_id == semester_id)
-        assessments = {a.student_id: a for a in query.all()}
+        # 取得操行評估 - 不使用 semester_id 過濾，因為 FK 是 academic_year_id
+        assessments = {a.student_id: a for a in db.query(ConductAssessment).filter(ConductAssessment.student_id.in_(student_ids)).all()}
 
         # 建立表格
         columns = ["學號", "姓名", "欠作業", "欠課本", "上課違規", "儀表不符", "遲到", "缺席", "請假",
@@ -111,10 +109,8 @@ class ConductAnalysis(BaseSkill):
         students = db.query(Student).filter(Student.class_id == class_id).order_by(Student.class_number).all()
         student_ids = [s.id for s in students]
 
-        query = db.query(ConductAssessment).filter(ConductAssessment.student_id.in_(student_ids))
-        if semester_id:
-            query = query.filter(ConductAssessment.semester_id == semester_id)
-        assessments = {a.student_id: a for a in query.all()}
+        # 取得操行評估 - 不使用 semester_id 過濾，因為 FK 是 academic_year_id
+        assessments = {a.student_id: a for a in db.query(ConductAssessment).filter(ConductAssessment.student_id.in_(student_ids)).all()}
 
         # 統計分析
         total_students = len(students)
