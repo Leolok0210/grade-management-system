@@ -151,7 +151,7 @@ export function useChat() {
             return { ...m, _status: undefined };
           }
           // 沒有內容，顯示錯誤
-          return { ...m, content: "抱歉，發生錯誤，請稍後再試。", _status: undefined };
+          return { ...m, content: "抱歉，發生錯誤，請稍後再試。", _status: undefined, _error: true };
         })
       );
     } finally {

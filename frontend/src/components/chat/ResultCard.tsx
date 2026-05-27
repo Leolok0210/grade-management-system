@@ -13,6 +13,8 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
   const [sortCol, setSortCol] = useState<number | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [copied, setCopied] = useState(false);
   const PAGE_SIZE = 20;
 
   const handleSort = (colIndex: number) => {
@@ -42,8 +44,32 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
     return rows;
   }, [card.payload?.rows, sortCol, sortDir]);
 
-  const totalPages = Math.ceil(sortedRows.length / PAGE_SIZE);
-  const pagedRows = sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const filteredRows = useMemo(() => {
+    if (!card.payload?.rows) return [];
+    if (!searchQuery.trim()) return sortedRows;
+    const query = searchQuery.toLowerCase();
+    return sortedRows.filter((row: any[]) =>
+      row.some((cell) => String(cell || "").toLowerCase().includes(query))
+    );
+  }, [sortedRows, searchQuery]);
+
+  const copyToCsv = () => {
+    if (!card.payload?.columns || !filteredRows.length) return;
+    const header = card.payload.columns.join(",");
+    const rows = filteredRows.map((row: any[]) =>
+      row.map((cell) => {
+        const str = String(cell ?? "");
+        return str.includes(",") || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+      }).join(",")
+    );
+    navigator.clipboard.writeText([header, ...rows].join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
+  const pagedRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   if (card.type === "chart") {
     return (
@@ -62,7 +88,21 @@ export function ResultCard({ card, onClose }: ResultCardProps) {
       <div style={styles.card}>
         <div style={styles.header}>
           <h3 style={styles.title}>{card.title}</h3>
-          <span style={styles.count}>{sortedRows.length} 筆</span>
+          <span style={styles.count}>{filteredRows.length} 筆</span>
+          <input
+            type="text"
+            placeholder="搜尋..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+            style={styles.searchInput}
+          />
+          <button
+            onClick={copyToCsv}
+            style={styles.copyBtn}
+            title="複製為 CSV"
+          >
+            {copied ? "✓ 已複製" : "📋 複製"}
+          </button>
           <button onClick={onClose} style={styles.closeBtn}>✕</button>
         </div>
         <div style={styles.tableWrap}>
@@ -152,6 +192,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: { fontSize: 16, fontWeight: 600, margin: 0 },
   count: { fontSize: 13, color: "#888", marginRight: 8 },
+  searchInput: {
+    padding: "4px 8px",
+    border: "1px solid #ddd",
+    borderRadius: 4,
+    fontSize: 13,
+    width: 120,
+    marginRight: 8,
+  },
+  copyBtn: {
+    padding: "4px 10px",
+    background: "#f3f4f6",
+    color: "#555",
+    border: "1px solid #ddd",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontSize: 13,
+    marginRight: 8,
+  },
   closeBtn: {
     background: "none",
     border: "none",

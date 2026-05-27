@@ -7,6 +7,7 @@ export interface ChatMessage {
   dataCards?: DataCard[];
   confirmation?: ConfirmationRequest;
   _status?: string;
+  _error?: boolean;
 }
 
 export interface DataCard {

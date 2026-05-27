@@ -22,6 +22,8 @@ export function ChatWindow() {
   const [welcomeHints, setWelcomeHints] = useState<string[]>([]);
   const [uploadedFile, setUploadedFile] = useState<{ file_id: string; filename: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState("");
+  const [convSearch, setConvSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +70,7 @@ export function ChatWindow() {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
+    setLastUserMessage(text);
     // 如果有上傳檔案，在訊息中附加檔案資訊
     const messageWithFile = uploadedFile
       ? `${text}\n[已上傳檔案: ${uploadedFile.filename}，路徑: /Users/leo/Downloads/${uploadedFile.filename}]`
@@ -81,6 +84,10 @@ export function ChatWindow() {
       e.preventDefault();
       handleSend();
     }
+    if (e.key === "ArrowUp" && input === "" && lastUserMessage) {
+      e.preventDefault();
+      setInput(lastUserMessage);
+    }
   };
 
   return (
@@ -92,11 +99,22 @@ export function ChatWindow() {
           <button onClick={() => setSidebarOpen(false)} style={styles.sidebarClose}>✕</button>
         </div>
         <button onClick={clearChat} style={styles.newChatBtn}>+ 新對話</button>
+        <div style={styles.convSearchWrap}>
+          <input
+            type="text"
+            placeholder="搜尋對話..."
+            value={convSearch}
+            onChange={(e) => setConvSearch(e.target.value)}
+            style={styles.convSearchInput}
+          />
+        </div>
         <div style={styles.convList}>
           {conversations.length === 0 && (
             <div style={styles.emptyConv}>尚無對話</div>
           )}
-          {conversations.map((c) => (
+          {conversations
+            .filter((c) => !convSearch.trim() || (c.preview || "").toLowerCase().includes(convSearch.toLowerCase()))
+            .map((c) => (
             <button
               key={c.id}
               style={styles.convItem}
@@ -145,6 +163,19 @@ export function ChatWindow() {
                 )}
                 {!msg.content && !msg._status && msg.role === "assistant" && loading && (
                   <span style={styles.typing}>思考中...</span>
+                )}
+                {msg._error && (
+                  <button
+                    onClick={() => {
+                      const idx = messages.findIndex(m => m.id === msg.id);
+                      if (idx > 0 && messages[idx - 1].role === "user") {
+                        sendMessage(messages[idx - 1].content);
+                      }
+                    }}
+                    style={styles.retryBtn}
+                  >
+                    重試
+                  </button>
                 )}
               </div>
               {msg.dataCards && msg.dataCards.length > 0 && (
@@ -267,6 +298,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
   },
   convList: { flex: 1, overflowY: "auto", padding: "4px 0" },
+  convSearchWrap: { padding: "0 12px 8px" },
+  convSearchInput: {
+    width: "100%",
+    padding: "6px 8px",
+    border: "1px solid #ddd",
+    borderRadius: 6,
+    fontSize: 13,
+    boxSizing: "border-box",
+  },
   emptyConv: { padding: 16, color: "#aaa", fontSize: 13, textAlign: "center" as const },
   convItem: {
     display: "flex",
@@ -320,6 +360,17 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
   },
   typing: { color: "#999", fontSize: 13 },
+  retryBtn: {
+    display: "block",
+    marginTop: 8,
+    padding: "6px 12px",
+    background: "#fff",
+    color: "#4f46e5",
+    border: "1px solid #4f46e5",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 13,
+  },
   cardArea: { padding: "0 20px 8px" },
   inputArea: {
     display: "flex",
